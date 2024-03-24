@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option go_package = "./proto";
+
+package proto;
+
+service MinerService {
+    rpc Mine(MinerConfig) returns (MinerResources);
+}
+
+message NoParam{};
+
+message MinerConfig{
+    string path = 1;
+}
+
+message MinerData{
+    string type = 1;
+    string name = 2;
+    string value = 3;
+}
+
+message MinerResource{
+    repeated MinerData resource = 1;
+}
+
+message MinerResources{
+    repeated MinerResource resources = 1;
+}
+
+message TestResponse {
+    string message = 1;
+}
