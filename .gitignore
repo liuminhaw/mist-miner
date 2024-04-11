@@ -26,3 +26,6 @@ plugins/bin/*
 
 # config file
 config.hcl
+
+# Execution results
+.miner

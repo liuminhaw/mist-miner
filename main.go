@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -11,17 +10,20 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/liuminhaw/mist-miner/shared"
+	"github.com/liuminhaw/mist-miner/shelf"
 )
 
 var CONFIG_PATH = "config.hcl"
 
-func run(binaryPath string, logger hclog.Logger) error {
+func run(plugName, plugId string, logger hclog.Logger) error {
 	// Setup logger
 	// logger := hclog.New(&hclog.LoggerOptions{
 	// 	Level:      hclog.Debug,
 	// 	Output:     os.Stderr,
 	// 	JSONFormat: true,
 	// })
+	binaryPath := fmt.Sprintf("./plugins/bin/%s", plugName)
+	fmt.Printf("Binary Path: %s\n", binaryPath)
 
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
@@ -60,11 +62,22 @@ func run(binaryPath string, logger hclog.Logger) error {
 		return err
 	}
 
-	b, err := json.Marshal(resources)
-	if err != nil {
-		return err
+	for _, resource := range resources {
+		stuff, err := shelf.NewStuff(plugName, plugId, resource)
+		if err != nil {
+			return err
+		}
+
+		if err := stuff.Write(); err != nil {
+			return err
+		}
 	}
-	fmt.Printf("Resources: %s\n", string(b))
+
+	// b, err := json.Marshal(resources)
+	// if err != nil {
+	// 	return err
+	// }
+	// fmt.Printf("Resources: %s\n", string(b))
 
 	return nil
 }
@@ -88,10 +101,9 @@ func main() {
 
 	// Run plugins
 	for _, plug := range hclConf.Plugs {
-        binaryPath := fmt.Sprintf("./plugins/bin/%s", plug.Name)
 		fmt.Printf("Plug Name: %s\n", plug.Name)
-		fmt.Printf("Plug executable: %s\n", binaryPath)
-		if err := run(binaryPath, logger); err != nil {
+		fmt.Printf("Plug Identity: %s\n", plug.Identity)
+		if err := run(plug.Name, plug.Identity, logger); err != nil {
 			fmt.Printf("Error running plugin: %+v\n", err)
 			os.Exit(1)
 		}

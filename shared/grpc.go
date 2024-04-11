@@ -14,7 +14,7 @@ type GRPCClient struct {
 }
 
 func (m *GRPCClient) Mine(config MinerConfig) (MinerResources, error) {
-    fmt.Printf("GRPCClient Mine: %+v\n", config)
+	fmt.Printf("GRPCClient Mine: %+v\n", config)
 	resources, err := m.client.Mine(context.Background(), &proto.MinerConfig{Path: config.Path})
 	if err != nil {
 		return nil, err
@@ -26,9 +26,9 @@ func (m *GRPCClient) Mine(config MinerConfig) (MinerResources, error) {
 		minerResource := MinerResource{}
 		for _, data := range resource.Resource {
 			minerResource = append(minerResource, MinerData{
-                Type:    data.Type,
-				Name:    data.Name,
-				Value:    data.Value,
+				Type:  data.Type,
+				Name:  data.Name,
+				Value: data.Value,
 			})
 		}
 		minerResources = append(minerResources, minerResource)
@@ -45,18 +45,18 @@ type GRPCServer struct {
 }
 
 func (m *GRPCServer) Mine(ctx context.Context, req *proto.MinerConfig) (*proto.MinerResources, error) {
-// func (m *GRPCServer) Mine(ctx context.Context, req *proto.NoParam) (*proto.MinerResources, error) {
+	// func (m *GRPCServer) Mine(ctx context.Context, req *proto.NoParam) (*proto.MinerResources, error) {
 	protoResources := []*proto.MinerResource{}
 
-    resources, err := m.Impl.Mine(MinerConfig{Path: req.Path})
+	resources, err := m.Impl.Mine(MinerConfig{Path: req.Path})
 	fmt.Printf("Resources: %+v\n", resources)
 	for _, resource := range resources {
 		protoResource := []*proto.MinerData{}
 		for _, data := range resource {
 			protoResource = append(protoResource, &proto.MinerData{
-                Type:   data.Type,
-				Name:    data.Name,
-				Value:    data.Value,
+				Type:  data.Type,
+				Name:  data.Name,
+				Value: data.Value,
 			})
 		}
 		protoResources = append(protoResources, &proto.MinerResource{

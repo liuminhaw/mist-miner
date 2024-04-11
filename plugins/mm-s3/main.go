@@ -100,11 +100,11 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 			} else {
 				for _, tag := range tagsOutput.TagSet {
 					log.Printf("Tag name: %s, value: %s\n", *tag.Key, *tag.Value)
-                    bucketResource = append(bucketResource, shared.MinerData{
-                        Type:    "tag",
-                        Name:    *tag.Key,
-                        Value:    *tag.Value,
-                    })
+					bucketResource = append(bucketResource, shared.MinerData{
+						Type:  "tag",
+						Name:  *tag.Key,
+						Value: *tag.Value,
+					})
 				}
 			}
 			resources = append(resources, bucketResource)
@@ -147,4 +147,3 @@ func getBucketRegion(client *s3.Client, bucket string) (string, error) {
 
 	return region, nil
 }
-

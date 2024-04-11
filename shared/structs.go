@@ -25,11 +25,17 @@ type MinerResources []MinerResource
 
 // HCL config structure
 type HclConfig struct {
-	Plugs []Plug `hcl:"plug,block"`
+	Bolt  HclBolt `hcl:"bolt,block"`
+	Plugs []Plug  `hcl:"plug,block"`
+}
+
+type HclBolt struct {
+	Name string `hcl:"name"`
 }
 
 type Plug struct {
 	Name       string     `hcl:"name,label"`
+	Identity   string     `hcl:"identity,label"`
 	Profile    string     `hcl:"profile"`
 	Identifier Identifier `hcl:"identifier,block"`
 	Properties []Property `hcl:"property,block"`

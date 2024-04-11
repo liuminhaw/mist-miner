@@ -8,7 +8,7 @@ go build -o mist-miner
 ```
 Build plugin mm-s3
 ```bash
-go build -o mm-s3 ./plugins/mm-s3
+go build -o ./plugins/bin/mm-s3 ./plugins/mm-s3
 ```
 Set which plugin binary to use
 ```bash
