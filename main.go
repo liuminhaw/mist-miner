@@ -50,13 +50,7 @@ func run(plugName, plugId string, logger hclog.Logger) error {
 
 	// We should have a Greeter now
 	miner := raw.(shared.Miner)
-	// greeter := raw.(shared.Greeter)
-	// message, err := greeter.SayHello()
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Println(message)
-	// _, err = greeter.SayHelloServerStream()
+
 	resources, err := miner.Mine(shared.MinerConfig{Path: CONFIG_PATH})
 	if err != nil {
 		return err

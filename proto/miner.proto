@@ -14,14 +14,15 @@ message MinerConfig{
     string path = 1;
 }
 
-message MinerData{
+message MinerProperty{
     string type = 1;
     string name = 2;
     string value = 3;
 }
 
 message MinerResource{
-    repeated MinerData resource = 1;
+    string identifier = 1;
+    repeated MinerProperty properties = 2;
 }
 
 message MinerResources{

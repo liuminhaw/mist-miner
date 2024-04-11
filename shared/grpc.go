@@ -23,9 +23,12 @@ func (m *GRPCClient) Mine(config MinerConfig) (MinerResources, error) {
 	// Convert proto resources to shared resources
 	minerResources := MinerResources{}
 	for _, resource := range resources.Resources {
-		minerResource := MinerResource{}
-		for _, data := range resource.Resource {
-			minerResource = append(minerResource, MinerData{
+		minerResource := MinerResource{
+			Identifier: resource.Identifier,
+			Properties: []MinerProperty{},
+		}
+		for _, data := range resource.Properties {
+			minerResource.Properties = append(minerResource.Properties, MinerProperty{
 				Type:  data.Type,
 				Name:  data.Name,
 				Value: data.Value,
@@ -51,17 +54,18 @@ func (m *GRPCServer) Mine(ctx context.Context, req *proto.MinerConfig) (*proto.M
 	resources, err := m.Impl.Mine(MinerConfig{Path: req.Path})
 	fmt.Printf("Resources: %+v\n", resources)
 	for _, resource := range resources {
-		protoResource := []*proto.MinerData{}
-		for _, data := range resource {
-			protoResource = append(protoResource, &proto.MinerData{
+		protoResource := proto.MinerResource{
+			Identifier: resource.Identifier,
+			Properties: []*proto.MinerProperty{},
+		}
+		for _, data := range resource.Properties {
+			protoResource.Properties = append(protoResource.Properties, &proto.MinerProperty{
 				Type:  data.Type,
 				Name:  data.Name,
 				Value: data.Value,
 			})
 		}
-		protoResources = append(protoResources, &proto.MinerResource{
-			Resource: protoResource,
-		})
+		protoResources = append(protoResources, &protoResource)
 	}
 
 	return &proto.MinerResources{

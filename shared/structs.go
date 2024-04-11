@@ -13,36 +13,29 @@ type MinerConfig struct {
 	Path string
 }
 
-type MinerData struct {
+type MinerProperty struct {
 	Type  string
 	Name  string
 	Value string
 }
 
-type MinerResource []MinerData
+type MinerResource struct {
+	Identifier string
+	Properties []MinerProperty
+}
 
 type MinerResources []MinerResource
 
 // HCL config structure
 type HclConfig struct {
-	Bolt  HclBolt `hcl:"bolt,block"`
-	Plugs []Plug  `hcl:"plug,block"`
-}
-
-type HclBolt struct {
-	Name string `hcl:"name"`
+	Plugs []Plug `hcl:"plug,block"`
 }
 
 type Plug struct {
 	Name       string     `hcl:"name,label"`
 	Identity   string     `hcl:"identity,label"`
 	Profile    string     `hcl:"profile"`
-	Identifier Identifier `hcl:"identifier,block"`
 	Properties []Property `hcl:"property,block"`
-}
-
-type Identifier struct {
-	Field string `hcl:"field"`
 }
 
 type Property struct {

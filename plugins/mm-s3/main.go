@@ -65,12 +65,7 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 			client := s3.NewFromConfig(cfg)
 
 			// fmt.Printf("Bucket: %s, region: %s\n", *bucket.Name, bucketRegion)
-			bucketResource = append(bucketResource, shared.MinerData{
-				// TODOs: Set to use default identifier field if config is not set
-				Type:  "identifier",
-				Name:  plug.Identifier.Field,
-				Value: *bucket.Name,
-			})
+			bucketResource.Identifier = *bucket.Name
 
 			tagsOutput, err := client.GetBucketTagging(
 				context.Background(),
@@ -100,7 +95,7 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 			} else {
 				for _, tag := range tagsOutput.TagSet {
 					log.Printf("Tag name: %s, value: %s\n", *tag.Key, *tag.Value)
-					bucketResource = append(bucketResource, shared.MinerData{
+					bucketResource.Properties = append(bucketResource.Properties, shared.MinerProperty{
 						Type:  "tag",
 						Name:  *tag.Key,
 						Value: *tag.Value,
