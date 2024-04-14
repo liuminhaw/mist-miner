@@ -56,16 +56,40 @@ func run(plugName, plugId string, logger hclog.Logger) error {
 		return err
 	}
 
+	labelMap := shelf.IdentifierHashMaps{
+		Module:   plugName,
+		Identity: plugId,
+		Maps:     []shelf.IdentifierHashMap{},
+	}
 	for _, resource := range resources {
 		stuff, err := shelf.NewStuff(plugName, plugId, resource)
 		if err != nil {
 			return err
 		}
 
+		identifier, err := stuff.ResourceIdentifier()
+		if err != nil {
+			return err
+		}
+
+		labelMap.Maps = append(labelMap.Maps, shelf.IdentifierHashMap{
+			Identifier: identifier,
+			Hash:       stuff.Hash,
+		})
+
 		if err := stuff.Write(); err != nil {
 			return err
 		}
 	}
+
+	labelMap.Sort()
+	if err := labelMap.Write(); err != nil {
+		return err
+	}
+
+	// for _, lm := range labelMap.Maps {
+	// 	fmt.Printf("Hash: %s, Identifier: %s\n", lm.Hash, lm.Identifier)
+	// }
 
 	// b, err := json.Marshal(resources)
 	// if err != nil {

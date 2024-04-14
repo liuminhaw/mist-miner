@@ -8,9 +8,9 @@ import (
 
 func main() {
 	stuff := shelf.Stuff{
-		Hash:     "2cbe35d5c8b0de9d95ce4bf80ec03b4661ae67f1beac75016620b81447e724d9",
-		Module:   "mm-s3",
-		Identity: "lmhaw",
+		Hash:     "",
+		Module:   "",
+		Identity: "",
 	}
 
 	if err := stuff.Read(); err != nil {

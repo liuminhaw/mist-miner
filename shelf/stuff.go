@@ -12,10 +12,6 @@ import (
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
-const (
-	SHELF_DIR = ".miner"
-)
-
 type Stuff struct {
 	Hash     string
 	Module   string
@@ -43,7 +39,7 @@ func NewStuff(plugName, plugId string, resource shared.MinerResource) (*Stuff, e
 
 // Write writes the Stuff resource content to a file
 func (s *Stuff) Write() error {
-	blobDir := fmt.Sprintf("%s/stuffs/%s/%s/%s", SHELF_DIR, s.Module, s.Identity, s.Hash[:2])
+	blobDir := s.dir()
 	err := os.MkdirAll(blobDir, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("blob write: mkdir: %w", err)
@@ -74,14 +70,8 @@ func (s *Stuff) Write() error {
 
 // Read reads the Stuff resource content from a file and stores it in the Stuff struct
 func (s *Stuff) Read() error {
-	blobFile := fmt.Sprintf(
-		"%s/stuffs/%s/%s/%s/%s",
-		SHELF_DIR,
-		s.Module,
-		s.Identity,
-		s.Hash[:2],
-		s.Hash[2:],
-	)
+	blobDir := s.dir()
+	blobFile := fmt.Sprintf("%s/%s", blobDir, s.Hash[2:])
 
 	if _, err := os.Stat(blobFile); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("blob read: stuff not found: %s", blobFile)
@@ -106,4 +96,21 @@ func (s *Stuff) Read() error {
 	s.Resource = b
 
 	return nil
+}
+
+// ResourceIdentifier extract and return Identifier value from stored resource
+func (s *Stuff) ResourceIdentifier() (string, error) {
+	resource := shared.MinerResource{}
+
+	err := json.Unmarshal(s.Resource, &resource)
+	if err != nil {
+		return "", fmt.Errorf("resource identifier: unmarshal: %w", err)
+	}
+
+	return resource.Identifier, nil
+}
+
+// dir returns the directory path of Stuff
+func (s *Stuff) dir() string {
+	return fmt.Sprintf("%s/stuffs/%s/%s/%s", SHELF_DIR, s.Module, s.Identity, s.Hash[:2])
 }
