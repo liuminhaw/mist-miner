@@ -87,6 +87,15 @@ func run(plugName, plugId string, logger hclog.Logger) error {
 		return err
 	}
 
+	laberMark, err := shelf.NewMark(plugName, plugId, labelMap.Hash)
+	if err != nil {
+		return err
+	}
+	err = laberMark.Update()
+	if err != nil {
+		return err
+	}
+
 	// for _, lm := range labelMap.Maps {
 	// 	fmt.Printf("Hash: %s, Identifier: %s\n", lm.Hash, lm.Identifier)
 	// }
