@@ -39,8 +39,12 @@ func NewStuff(plugName, plugId string, resource shared.MinerResource) (*Stuff, e
 
 // Write writes the Stuff resource content to a file
 func (s *Stuff) Write() error {
-	blobDir := s.dir()
-	err := os.MkdirAll(blobDir, os.ModePerm)
+	blobDir, err := s.dir()
+	if err != nil {
+		return fmt.Errorf("blob write: %w", err)
+	}
+
+	err = os.MkdirAll(blobDir, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("blob write: mkdir: %w", err)
 	}
@@ -70,7 +74,11 @@ func (s *Stuff) Write() error {
 
 // Read reads the Stuff resource content from a file and stores it in the Stuff struct
 func (s *Stuff) Read() error {
-	blobDir := s.dir()
+	blobDir, err := s.dir()
+	if err != nil {
+		return fmt.Errorf("blob read: %w", err)
+	}
+
 	blobFile := fmt.Sprintf("%s/%s", blobDir, s.Hash[2:])
 
 	if _, err := os.Stat(blobFile); errors.Is(err, os.ErrNotExist) {
@@ -111,6 +119,12 @@ func (s *Stuff) ResourceIdentifier() (string, error) {
 }
 
 // dir returns the directory path of Stuff
-func (s *Stuff) dir() string {
-	return fmt.Sprintf("%s/stuffs/%s/%s/%s", SHELF_DIR, s.Module, s.Identity, s.Hash[:2])
+// If absDir is empty, the relative path is returned
+func (s *Stuff) dir() (string, error) {
+	sd, err := shelfDir()
+	if err != nil {
+		return "", fmt.Errorf("stuff dir: %w", err)
+	}
+
+	return fmt.Sprintf("%s/stuffs/%s/%s/%s", sd, s.Module, s.Identity, s.Hash[:2]), nil
 }

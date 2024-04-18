@@ -39,7 +39,11 @@ func (lhm *IdentifierHashMaps) Write() error {
 		return fmt.Errorf("identifier hash maps write: calc hash: %w", err)
 	}
 
-	mapDir := lhm.dir()
+	mapDir, err := lhm.dir()
+	if err != nil {
+		return fmt.Errorf("identifier hash maps write: %w", err)
+	}
+
 	err = os.MkdirAll(mapDir, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("identifier hash maps write: mkdir: %w", err)
@@ -69,8 +73,13 @@ func (lhm *IdentifierHashMaps) Write() error {
 }
 
 // dir returns the directory path of IdentifierHashMaps.
-func (lhm *IdentifierHashMaps) dir() string {
-	return fmt.Sprintf("%s/labels/%s/%s/maps/%s", SHELF_DIR, lhm.Module, lhm.Identity, lhm.Hash[:2])
+func (lhm *IdentifierHashMaps) dir() (string, error) {
+	sd, err := shelfDir()
+	if err != nil {
+		return "", fmt.Errorf("identifier hash maps dir: %w", err)
+	}
+
+	return fmt.Sprintf("%s/labels/%s/%s/maps/%s", sd, lhm.Module, lhm.Identity, lhm.Hash[:2]), nil
 }
 
 // calcHash calculates the hash of Maps in IdentifierHashMaps.
@@ -98,15 +107,24 @@ type headMark struct {
 }
 
 // file returns the path of the HEAD file.
-func (hm *headMark) file() string {
-	return fmt.Sprintf("%s/labels/%s/%s/marks/HEAD", SHELF_DIR, hm.module, hm.identity)
+func (hm *headMark) file() (string, error) {
+	sd, err := shelfDir()
+	if err != nil {
+		return "", fmt.Errorf("head mark file: %w", err)
+	}
+
+	return fmt.Sprintf("%s/labels/%s/%s/marks/HEAD", sd, hm.module, hm.identity), nil
 }
 
 // write writes the reference to the HEAD file.
 // reference is the hash of the latest label mark.
 func (hm *headMark) write() error {
-	headFile := hm.file()
-	err := os.MkdirAll(filepath.Dir(headFile), os.ModePerm)
+	headFile, err := hm.file()
+	if err != nil {
+		return fmt.Errorf("head mark write: %w", err)
+	}
+
+	err = os.MkdirAll(filepath.Dir(headFile), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("head mark write: mkdir: %w", err)
 	}
@@ -128,7 +146,11 @@ func (hm *headMark) write() error {
 // currentRef returns the reference of headMark
 // which is the hash of the latest label mark.
 func (hm *headMark) currentRef() ([]byte, error) {
-	headFile := hm.file()
+	headFile, err := hm.file()
+	if err != nil {
+		return nil, fmt.Errorf("head mark current ref: %w", err)
+	}
+
 	if _, err := os.Stat(headFile); errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("head mark read: file not found: %w", err)
 	}
@@ -171,7 +193,11 @@ func NewMark(plugName, plugId string, mapHash string) (*LabelMark, error) {
 		module:   plugName,
 		identity: plugId,
 	}
-	if _, err := os.Stat(head.file()); !errors.Is(err, os.ErrNotExist) {
+	headFile, err := head.file()
+	if err != nil {
+		return nil, fmt.Errorf("new label mark: %w", err)
+	}
+	if _, err := os.Stat(headFile); !errors.Is(err, os.ErrNotExist) {
 		parent, err := head.currentRef()
 		if err != nil {
 			return nil, fmt.Errorf("new label mark: head ref: %w", err)
@@ -195,7 +221,11 @@ func (lm *LabelMark) Update() error {
 		return fmt.Errorf("label mark update: %w", err)
 	}
 
-	markDir := lm.dir()
+	markDir, err := lm.dir()
+	if err != nil {
+		return fmt.Errorf("label mark update: %w", err)
+	}
+
 	err = os.MkdirAll(markDir, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("label mark update: mkdir: %w", err)
@@ -260,6 +290,11 @@ func (lm *LabelMark) calcHash() error {
 }
 
 // dir returns the directory path of LabelMark.
-func (lm *LabelMark) dir() string {
-	return fmt.Sprintf("%s/labels/%s/%s/marks/%s", SHELF_DIR, lm.Module, lm.Identity, lm.Hash[:2])
+func (lm *LabelMark) dir() (string, error) {
+	sd, err := shelfDir()
+	if err != nil {
+		return "", fmt.Errorf("label mark dir: %w", err)
+	}
+
+	return fmt.Sprintf("%s/labels/%s/%s/marks/%s", sd, lm.Module, lm.Identity, lm.Hash[:2]), nil
 }
