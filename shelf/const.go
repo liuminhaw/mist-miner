@@ -28,7 +28,7 @@ const (
 // - type 3: stuff
 //   - Record of fetched stuff information,
 //     in json format of struct shared.MinerResource
-func objectDir(group, prefixBytes string) (string, error) {
+func ObjectDir(group, prefixBytes string) (string, error) {
 	execPath, err := os.Executable()
 	if err != nil {
 		return "", fmt.Errorf("object dir: get executable: %w", err)
@@ -37,9 +37,9 @@ func objectDir(group, prefixBytes string) (string, error) {
 	return filepath.Join(filepath.Dir(execPath), SHELF_DIR, group, "objects", prefixBytes), nil
 }
 
-// objectFile returns the file path to store the object record with the given file name
-func objectFile(group, objectHash string) (string, error) {
-	dir, err := objectDir(group, objectHash[:2])
+// ObjectFile returns the file path to store the object record with the given file name
+func ObjectFile(group, objectHash string) (string, error) {
+	dir, err := ObjectDir(group, objectHash[:2])
 	if err != nil {
 		return "", fmt.Errorf("object file: %w", err)
 	}
@@ -47,9 +47,9 @@ func objectFile(group, objectHash string) (string, error) {
 	return filepath.Join(dir, objectHash[2:]), nil
 }
 
-// refFile returns the file path to store the reference to the latest record mark
+// RefFile returns the file path to store the reference to the latest record mark
 // with the given file name
-func refFile(group, name string) (string, error) {
+func RefFile(group, name string) (string, error) {
 	execPath, err := os.Executable()
 	if err != nil {
 		return "", fmt.Errorf("ref dir: get executable: %w", err)

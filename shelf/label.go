@@ -42,7 +42,7 @@ func (lhm *IdentifierHashMaps) Write() error {
 		return fmt.Errorf("identifier hash maps write: calc hash: %w", err)
 	}
 
-	mapFile, err := objectFile(lhm.Group, lhm.Hash)
+	mapFile, err := ObjectFile(lhm.Group, lhm.Hash)
 	if err != nil {
 		return fmt.Errorf("identifier hash maps write: %w", err)
 	}
@@ -100,23 +100,23 @@ type refMark struct {
 // write writes the reference to the HEAD file.
 // reference is the hash of the latest label mark.
 func (m *refMark) write() error {
-	refFile, err := refFile(m.group, m.name)
+	RefFile, err := RefFile(m.group, m.name)
 	if err != nil {
 		return fmt.Errorf("ref mark write: %w", err)
 	}
 
-	err = os.MkdirAll(filepath.Dir(refFile), os.ModePerm)
+	err = os.MkdirAll(filepath.Dir(RefFile), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("ref mark write: mkdir: %w", err)
 	}
 
-	f, err := os.Create(refFile)
+	f, err := os.Create(RefFile)
 	if err != nil {
 		return fmt.Errorf("ref mark write: create file: %w", err)
 	}
 	defer f.Close()
 
-	_, err = f.Write(m.reference)
+	_, err = f.WriteString(fmt.Sprintf("%s\n", m.reference))
 	if err != nil {
 		return fmt.Errorf("ref mark write: write file: %w", err)
 	}
@@ -127,16 +127,16 @@ func (m *refMark) write() error {
 // currentRef returns the reference of headMark
 // which is the hash of the latest label mark.
 func (m *refMark) currentRef() ([]byte, error) {
-	refFile, err := refFile(m.group, m.name)
+	RefFile, err := RefFile(m.group, m.name)
 	if err != nil {
 		return nil, fmt.Errorf("ref mark current ref: %w", err)
 	}
 
-	if _, err := os.Stat(refFile); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(RefFile); errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("ref mark read: file not found: %w", err)
 	}
 
-	f, err := os.Open(refFile)
+	f, err := os.Open(RefFile)
 	if err != nil {
 		return nil, fmt.Errorf("ref mark read: open file: %w", err)
 	}
@@ -179,7 +179,7 @@ func NewMark(plugName, plugId string, mapHash string) (*LabelMark, error) {
 		name:  "HEAD",
 		group: plugId,
 	}
-	headFile, err := refFile(head.group, head.name)
+	headFile, err := RefFile(head.group, head.name)
 	if err != nil {
 		return nil, fmt.Errorf("new label mark: %w", err)
 	}
@@ -215,7 +215,7 @@ func (lm *LabelMark) Update() error {
 		return fmt.Errorf("label mark update: %w", err)
 	}
 
-	markFile, err := objectFile(lm.Group, lm.Hash)
+	markFile, err := ObjectFile(lm.Group, lm.Hash)
 	if err != nil {
 		return fmt.Errorf("label mark update: %w", err)
 	}
@@ -296,4 +296,3 @@ func (lm *LabelMark) sort() {
 		return strings.Compare(a.Module, b.Module)
 	})
 }
-

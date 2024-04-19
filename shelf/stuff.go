@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -39,7 +38,7 @@ func NewStuff(plugId string, resource shared.MinerResource) (*Stuff, error) {
 
 // Write writes the Stuff resource content to a file
 func (s *Stuff) Write() error {
-	stuffFile, err := objectFile(s.Identity, s.Hash)
+	stuffFile, err := ObjectFile(s.Identity, s.Hash)
 	if err != nil {
 		return fmt.Errorf("stuff write: %w", err)
 	}
@@ -67,37 +66,6 @@ func (s *Stuff) Write() error {
 	defer w.Close()
 
 	fmt.Printf("Stuff file written: %s\n", stuffFile)
-	return nil
-}
-
-// Read reads the Stuff resource content from a file and stores it in the Stuff struct
-func (s *Stuff) Read() error {
-	stuffFile, err := objectFile(s.Identity, s.Hash)
-	if err != nil {
-		return fmt.Errorf("stuff read: %w", err)
-	}
-	if _, err := os.Stat(stuffFile); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("stuff read: stuff not found: %s", stuffFile)
-	}
-
-	f, err := os.Open(stuffFile)
-	if err != nil {
-		return fmt.Errorf("stuff read: open file: %w", err)
-	}
-	defer f.Close()
-
-	r, err := zlib.NewReader(f)
-	if err != nil {
-		return fmt.Errorf("stuff read: create reader: %w", err)
-	}
-	defer r.Close()
-
-	b, err := io.ReadAll(r)
-	if err != nil {
-		return fmt.Errorf("stuff read: read all: %w", err)
-	}
-	s.Resource = b
-
 	return nil
 }
 
