@@ -17,7 +17,7 @@ import (
 
 // catFileCmd represents the catFile command
 var catFileCmd = &cobra.Command{
-	Use:   "cat-file GROUP HASH",
+	Use:   "cat-file <group> <hash>",
 	Short: "Display the content of given hash object",
 	Long:  ``,
 	Args:  cobra.ExactArgs(2),

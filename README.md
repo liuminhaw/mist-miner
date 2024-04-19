@@ -25,7 +25,11 @@ export PLUGIN_BINARY="./mm-s3"
 Execution
 
 ```bash
-./mine
+# Fetch cloud resource records
+./mist-miner mine
+
+# Show given hash object file content
+./mist-miner cat-file <group> <hash>
 ```
 
 ## gRPC build
