@@ -40,12 +40,31 @@ var mineCmd = &cobra.Command{
 		}
 
 		// Run plugins
+		gLabels := make(groupLabels)
 		for _, plug := range hclConf.Plugs {
 			fmt.Printf("Plug Name: %s\n", plug.Name)
-			fmt.Printf("Plug Identity: %s\n", plug.Identity)
-			if err := run(plug.Name, plug.Identity, logger); err != nil {
+			fmt.Printf("Plug Group: %s\n", plug.Group)
+
+			err := run(pluginModule{name: plug.Name, group: plug.Group}, &gLabels, logger)
+			if err != nil {
 				fmt.Printf("Error running plugin: %+v\n", err)
 				os.Exit(1)
+			}
+		}
+
+		for group, labels := range gLabels {
+			fmt.Printf("Group: %s\n", group)
+			for _, label := range labels {
+				if err := label.Update(); err != nil {
+					fmt.Printf("Error updating label mark: %+v\n", err)
+					os.Exit(1)
+				}
+
+				fmt.Printf("Hash: %s\n", label.Hash)
+				fmt.Printf("Parent: %s\n", label.Parent)
+				for _, mapping := range label.Mappings {
+					fmt.Printf("Module: %s, Hash: %s\n", mapping.Module, mapping.Hash)
+				}
 			}
 		}
 
@@ -79,7 +98,14 @@ func init() {
 	mineCmd.Flags().StringVarP(&configFile, "config", "c", defaultConf, "hcl.conf")
 }
 
-func run(plugName, plugId string, logger hclog.Logger) error {
+type pluginModule struct {
+	name  string
+	group string
+}
+
+type groupLabels map[string][]shelf.LabelMark
+
+func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	// Setup logger
 	// logger := hclog.New(&hclog.LoggerOptions{
 	// 	Level:      hclog.Debug,
@@ -90,7 +116,7 @@ func run(plugName, plugId string, logger hclog.Logger) error {
 	if err != nil {
 		return err
 	}
-	binaryPath := fmt.Sprintf("%s/%s", pluginsBinDir, plugName)
+	binaryPath := fmt.Sprintf("%s/%s", pluginsBinDir, pMod.name)
 	fmt.Printf("Binary Path: %s\n", binaryPath)
 
 	client := plugin.NewClient(&plugin.ClientConfig{
@@ -125,12 +151,11 @@ func run(plugName, plugId string, logger hclog.Logger) error {
 	}
 
 	labelMap := shelf.IdentifierHashMaps{
-		Module:   plugName,
-		Identity: plugId,
-		Maps:     []shelf.IdentifierHashMap{},
+		Group: pMod.group,
+		Maps:  []shelf.IdentifierHashMap{},
 	}
 	for _, resource := range resources {
-		stuff, err := shelf.NewStuff(plugName, plugId, resource)
+		stuff, err := shelf.NewStuff(pMod.group, resource)
 		if err != nil {
 			return err
 		}
@@ -155,14 +180,26 @@ func run(plugName, plugId string, logger hclog.Logger) error {
 		return err
 	}
 
-	laberMark, err := shelf.NewMark(plugName, plugId, labelMap.Hash)
+	// Check if label mark with plugId (group) exists
+	// If not exists, create a new label mark and update
+	// If exists, update the existence label mark
+	if _, ok := (*gLabel)[pMod.group]; !ok {
+		(*gLabel)[pMod.group] = []shelf.LabelMark{}
+	}
+
+	labelMark, err := shelf.NewMark(pMod.name, pMod.group, labelMap.Hash)
 	if err != nil {
 		return err
 	}
-	err = laberMark.Update()
-	if err != nil {
-		return err
-	}
+
+	// Update labelMark to the groupLabels
+	labelMark.AddMapping(pMod.name, labelMap.Hash)
+	(*gLabel)[pMod.group] = append((*gLabel)[pMod.group], *labelMark)
+
+	// err = labelMark.Update()
+	// if err != nil {
+	// 	return err
+	// }
 
 	// for _, lm := range labelMap.Maps {
 	// 	fmt.Printf("Hash: %s, Identifier: %s\n", lm.Hash, lm.Identifier)

@@ -8,19 +8,20 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
 type Stuff struct {
-	Hash     string
-	Module   string
+	Hash string
+	// Module   string
 	Identity string
 	Resource []byte
 }
 
 // NewStuff creates a new Stuff from a plugin name and a MinerResource
-func NewStuff(plugName, plugId string, resource shared.MinerResource) (*Stuff, error) {
+func NewStuff(plugId string, resource shared.MinerResource) (*Stuff, error) {
 	b, err := json.Marshal(resource)
 	if err != nil {
 		return nil, fmt.Errorf("new blob: marshal: %w", err)
@@ -31,7 +32,6 @@ func NewStuff(plugName, plugId string, resource shared.MinerResource) (*Stuff, e
 
 	return &Stuff{
 		Hash:     fmt.Sprintf("%x", h.Sum(nil)),
-		Module:   plugName,
 		Identity: plugId,
 		Resource: b,
 	}, nil
@@ -39,67 +39,62 @@ func NewStuff(plugName, plugId string, resource shared.MinerResource) (*Stuff, e
 
 // Write writes the Stuff resource content to a file
 func (s *Stuff) Write() error {
-	blobDir, err := s.dir()
+	stuffFile, err := objectFile(s.Identity, s.Hash)
 	if err != nil {
-		return fmt.Errorf("blob write: %w", err)
+		return fmt.Errorf("stuff write: %w", err)
 	}
-
-	err = os.MkdirAll(blobDir, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("blob write: mkdir: %w", err)
-	}
-
-	blobFile := fmt.Sprintf("%s/%s", blobDir, s.Hash[2:])
-	if _, err := os.Stat(blobFile); !errors.Is(err, os.ErrNotExist) {
-		fmt.Printf("Stuff file already exists: %s\n", blobFile)
+	if _, err := os.Stat(stuffFile); !errors.Is(err, os.ErrNotExist) {
+		fmt.Printf("Stuff file already exists: %s\n", stuffFile)
 		return nil
 	}
 
-	f, err := os.Create(blobFile)
+	err = os.MkdirAll(filepath.Dir(stuffFile), os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("blob write: create file: %w", err)
+		return fmt.Errorf("stuff write: mkdir: %w", err)
+	}
+
+	f, err := os.Create(stuffFile)
+	if err != nil {
+		return fmt.Errorf("stuff write: create file: %w", err)
 	}
 	defer f.Close()
 
 	w := zlib.NewWriter(f)
 	_, err = w.Write(s.Resource)
 	if err != nil {
-		return fmt.Errorf("blob write: write file: %w", err)
+		return fmt.Errorf("stuff write: write file: %w", err)
 	}
 	defer w.Close()
 
-	fmt.Printf("Stuff file written: %s\n", blobFile)
+	fmt.Printf("Stuff file written: %s\n", stuffFile)
 	return nil
 }
 
 // Read reads the Stuff resource content from a file and stores it in the Stuff struct
 func (s *Stuff) Read() error {
-	blobDir, err := s.dir()
+	stuffFile, err := objectFile(s.Identity, s.Hash)
 	if err != nil {
-		return fmt.Errorf("blob read: %w", err)
+		return fmt.Errorf("stuff read: %w", err)
+	}
+	if _, err := os.Stat(stuffFile); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("stuff read: stuff not found: %s", stuffFile)
 	}
 
-	blobFile := fmt.Sprintf("%s/%s", blobDir, s.Hash[2:])
-
-	if _, err := os.Stat(blobFile); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("blob read: stuff not found: %s", blobFile)
-	}
-
-	f, err := os.Open(blobFile)
+	f, err := os.Open(stuffFile)
 	if err != nil {
-		return fmt.Errorf("blob read: open file: %w", err)
+		return fmt.Errorf("stuff read: open file: %w", err)
 	}
 	defer f.Close()
 
 	r, err := zlib.NewReader(f)
 	if err != nil {
-		return fmt.Errorf("blob read: create reader: %w", err)
+		return fmt.Errorf("stuff read: create reader: %w", err)
 	}
 	defer r.Close()
 
 	b, err := io.ReadAll(r)
 	if err != nil {
-		return fmt.Errorf("blob read: read all: %w", err)
+		return fmt.Errorf("stuff read: read all: %w", err)
 	}
 	s.Resource = b
 
@@ -116,15 +111,4 @@ func (s *Stuff) ResourceIdentifier() (string, error) {
 	}
 
 	return resource.Identifier, nil
-}
-
-// dir returns the directory path of Stuff
-// If absDir is empty, the relative path is returned
-func (s *Stuff) dir() (string, error) {
-	sd, err := shelfDir()
-	if err != nil {
-		return "", fmt.Errorf("stuff dir: %w", err)
-	}
-
-	return fmt.Sprintf("%s/stuffs/%s/%s/%s", sd, s.Module, s.Identity, s.Hash[:2]), nil
 }

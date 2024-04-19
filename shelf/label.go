@@ -19,16 +19,19 @@ type IdentifierHashMap struct {
 }
 
 type IdentifierHashMaps struct {
-	Hash     string
-	Module   string
-	Identity string
-	Maps     []IdentifierHashMap
-	buffer   bytes.Buffer
+	Hash string
+	// Module   string
+	Group  string
+	Maps   []IdentifierHashMap
+	buffer bytes.Buffer
 }
 
 // Sort sorts the IdentifierHashMaps by the hash field.
 func (ihm *IdentifierHashMaps) Sort() {
 	slices.SortStableFunc(ihm.Maps, func(a, b IdentifierHashMap) int {
+		if a.Identifier == b.Identifier {
+			return strings.Compare(a.Hash, b.Hash)
+		}
 		return strings.Compare(a.Identifier, b.Identifier)
 	})
 }
@@ -39,20 +42,18 @@ func (lhm *IdentifierHashMaps) Write() error {
 		return fmt.Errorf("identifier hash maps write: calc hash: %w", err)
 	}
 
-	mapDir, err := lhm.dir()
+	mapFile, err := objectFile(lhm.Group, lhm.Hash)
 	if err != nil {
 		return fmt.Errorf("identifier hash maps write: %w", err)
 	}
-
-	err = os.MkdirAll(mapDir, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("identifier hash maps write: mkdir: %w", err)
-	}
-
-	mapFile := fmt.Sprintf("%s/%s", mapDir, lhm.Hash[2:])
 	if _, err := os.Stat(mapFile); !errors.Is(err, os.ErrNotExist) {
 		fmt.Printf("Identifier hash maps file already exists: %s\n", mapFile)
 		return nil
+	}
+
+	err = os.MkdirAll(filepath.Dir(mapFile), os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("identifier hash maps write: mkdir: %w", err)
 	}
 
 	f, err := os.Create(mapFile)
@@ -70,16 +71,6 @@ func (lhm *IdentifierHashMaps) Write() error {
 
 	fmt.Printf("Identifier hash maps file written: %s\n", mapFile)
 	return nil
-}
-
-// dir returns the directory path of IdentifierHashMaps.
-func (lhm *IdentifierHashMaps) dir() (string, error) {
-	sd, err := shelfDir()
-	if err != nil {
-		return "", fmt.Errorf("identifier hash maps dir: %w", err)
-	}
-
-	return fmt.Sprintf("%s/labels/%s/%s/maps/%s", sd, lhm.Module, lhm.Identity, lhm.Hash[:2]), nil
 }
 
 // calcHash calculates the hash of Maps in IdentifierHashMaps.
@@ -100,44 +91,34 @@ func (lhm *IdentifierHashMaps) calcHash() error {
 	return nil
 }
 
-type headMark struct {
-	module    string
-	identity  string
+type refMark struct {
+	name      string
+	group     string
 	reference []byte
-}
-
-// file returns the path of the HEAD file.
-func (hm *headMark) file() (string, error) {
-	sd, err := shelfDir()
-	if err != nil {
-		return "", fmt.Errorf("head mark file: %w", err)
-	}
-
-	return fmt.Sprintf("%s/labels/%s/%s/marks/HEAD", sd, hm.module, hm.identity), nil
 }
 
 // write writes the reference to the HEAD file.
 // reference is the hash of the latest label mark.
-func (hm *headMark) write() error {
-	headFile, err := hm.file()
+func (m *refMark) write() error {
+	refFile, err := refFile(m.group, m.name)
 	if err != nil {
-		return fmt.Errorf("head mark write: %w", err)
+		return fmt.Errorf("ref mark write: %w", err)
 	}
 
-	err = os.MkdirAll(filepath.Dir(headFile), os.ModePerm)
+	err = os.MkdirAll(filepath.Dir(refFile), os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("head mark write: mkdir: %w", err)
+		return fmt.Errorf("ref mark write: mkdir: %w", err)
 	}
 
-	f, err := os.Create(headFile)
+	f, err := os.Create(refFile)
 	if err != nil {
-		return fmt.Errorf("head mark write: create file: %w", err)
+		return fmt.Errorf("ref mark write: create file: %w", err)
 	}
 	defer f.Close()
 
-	_, err = f.Write(hm.reference)
+	_, err = f.Write(m.reference)
 	if err != nil {
-		return fmt.Errorf("head mark write: write file: %w", err)
+		return fmt.Errorf("ref mark write: write file: %w", err)
 	}
 
 	return nil
@@ -145,55 +126,60 @@ func (hm *headMark) write() error {
 
 // currentRef returns the reference of headMark
 // which is the hash of the latest label mark.
-func (hm *headMark) currentRef() ([]byte, error) {
-	headFile, err := hm.file()
+func (m *refMark) currentRef() ([]byte, error) {
+	refFile, err := refFile(m.group, m.name)
 	if err != nil {
-		return nil, fmt.Errorf("head mark current ref: %w", err)
+		return nil, fmt.Errorf("ref mark current ref: %w", err)
 	}
 
-	if _, err := os.Stat(headFile); errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("head mark read: file not found: %w", err)
+	if _, err := os.Stat(refFile); errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("ref mark read: file not found: %w", err)
 	}
 
-	f, err := os.Open(headFile)
+	f, err := os.Open(refFile)
 	if err != nil {
-		return nil, fmt.Errorf("head mark read: open file: %w", err)
+		return nil, fmt.Errorf("ref mark read: open file: %w", err)
 	}
 	defer f.Close()
 
 	b := make([]byte, sha256.BlockSize)
 	_, err = f.Read(b)
 	if err != nil {
-		return nil, fmt.Errorf("head mark read: read file: %w", err)
+		return nil, fmt.Errorf("ref mark read: read file: %w", err)
 	}
 
 	return b, nil
 }
 
+type MarkMapping struct {
+	Module string
+	Hash   string
+}
+
 type LabelMark struct {
-	Module       string
-	Identity     string
-	Hash         string
-	TimeStamp    time.Time
-	Parent       string
-	LabelMapHash string
-	buffer       bytes.Buffer
+	// Module       string
+	Hash      string
+	TimeStamp time.Time
+	Parent    string
+	Mappings  []MarkMapping
+	Group     string
+	// LabelMapHash string
+	buffer bytes.Buffer
 }
 
 // NewMark creates a new label mark with the given plugin name, plugin id and label map hash.
 func NewMark(plugName, plugId string, mapHash string) (*LabelMark, error) {
 	mark := LabelMark{
-		Module:       plugName,
-		Identity:     plugId,
-		TimeStamp:    time.Now(),
-		LabelMapHash: mapHash,
+		Group:     plugId,
+		TimeStamp: time.Now(),
+		Mappings:  []MarkMapping{},
 	}
 
-	head := headMark{
-		module:   plugName,
-		identity: plugId,
+	head := refMark{
+		name:  "HEAD",
+		group: plugId,
 	}
-	headFile, err := head.file()
+	headFile, err := refFile(head.group, head.name)
 	if err != nil {
 		return nil, fmt.Errorf("new label mark: %w", err)
 	}
@@ -206,6 +192,14 @@ func NewMark(plugName, plugId string, mapHash string) (*LabelMark, error) {
 	}
 
 	return &mark, nil
+}
+
+// AddMapping adds a new mark mapping to the label mark.
+func (lm *LabelMark) AddMapping(module, hash string) {
+	lm.Mappings = append(lm.Mappings, MarkMapping{
+		Module: module,
+		Hash:   hash,
+	})
 }
 
 // Update writes the label mark to a file in format:
@@ -221,22 +215,21 @@ func (lm *LabelMark) Update() error {
 		return fmt.Errorf("label mark update: %w", err)
 	}
 
-	markDir, err := lm.dir()
+	markFile, err := objectFile(lm.Group, lm.Hash)
 	if err != nil {
 		return fmt.Errorf("label mark update: %w", err)
 	}
+	if _, err := os.Stat(markFile); !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("Label mark file already exists, there maybe a collision: %s\n", markFile)
+	}
 
+	markDir := filepath.Dir(markFile)
 	err = os.MkdirAll(markDir, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("label mark update: mkdir: %w", err)
 	}
 
-	fmt.Printf("Label buffer: %s\n", lm.buffer.String())
-
-	markFile := fmt.Sprintf("%s/%s", markDir, lm.Hash[2:])
-	if _, err := os.Stat(markFile); !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("Label mark file already exists, there maybe a collision: %s\n", markFile)
-	}
+	fmt.Printf("Label mark buffer: %s\n", lm.buffer.String())
 
 	f, err := os.Create(markFile)
 	if err != nil {
@@ -253,9 +246,9 @@ func (lm *LabelMark) Update() error {
 	fmt.Printf("Label mark file written: %s\n", markFile)
 
 	// Update the HEAD reference.
-	head := headMark{
-		module:    lm.Module,
-		identity:  lm.Identity,
+	head := refMark{
+		name:      "HEAD",
+		group:     lm.Group,
 		reference: []byte(lm.Hash),
 	}
 	if err := head.write(); err != nil {
@@ -274,10 +267,14 @@ func (lm *LabelMark) calcHash() error {
 		parent = lm.Parent
 	}
 
-	fmt.Printf("Parent: %s\n", parent)
+	// fmt.Printf("Parent: %s\n", parent)
 	fmt.Fprintf(&lm.buffer, "%v\n", lm.TimeStamp)
 	fmt.Fprintf(&lm.buffer, "%s\n", parent)
-	fmt.Fprintf(&lm.buffer, "%s\n", lm.LabelMapHash)
+
+	lm.sort()
+	for _, m := range lm.Mappings {
+		fmt.Fprintf(&lm.buffer, "%s %s\n", m.Hash, m.Module)
+	}
 
 	h := sha256.New()
 	_, err := h.Write(lm.buffer.Bytes())
@@ -289,12 +286,14 @@ func (lm *LabelMark) calcHash() error {
 	return nil
 }
 
-// dir returns the directory path of LabelMark.
-func (lm *LabelMark) dir() (string, error) {
-	sd, err := shelfDir()
-	if err != nil {
-		return "", fmt.Errorf("label mark dir: %w", err)
-	}
-
-	return fmt.Sprintf("%s/labels/%s/%s/marks/%s", sd, lm.Module, lm.Identity, lm.Hash[:2]), nil
+// sort sorts the MarkMappings slice in LabelMark
+// first by the module field then by the hash field.
+func (lm *LabelMark) sort() {
+	slices.SortStableFunc(lm.Mappings, func(a, b MarkMapping) int {
+		if a.Module == b.Module {
+			return strings.Compare(a.Hash, b.Hash)
+		}
+		return strings.Compare(a.Module, b.Module)
+	})
 }
+

@@ -33,7 +33,7 @@ type HclConfig struct {
 
 type Plug struct {
 	Name       string     `hcl:"name,label"`
-	Identity   string     `hcl:"identity,label"`
+	Group      string     `hcl:"group,label"`
 	Profile    string     `hcl:"profile"`
 	Properties []Property `hcl:"property,block"`
 }
