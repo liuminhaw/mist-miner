@@ -27,6 +27,8 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+
+	"github.com/liuminhaw/mist-miner/cmd/mmlog"
 )
 
 const (
@@ -56,6 +58,7 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.AddCommand(mmlog.LogCmd)
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
