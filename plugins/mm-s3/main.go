@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/smithy-go"
 	"github.com/hashicorp/go-plugin"
 	"github.com/liuminhaw/mist-miner/shared"
 )
@@ -30,9 +29,6 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 	if err != nil {
 		return nil, fmt.Errorf("mine: read config: %w", err)
 	}
-
-	// Read the tags configuration
-	// tagsMap := readTagsConfig(PLUG_NAME, hclConfig)
 
 	resources := shared.MinerResources{}
 	for _, plug := range hclConfig.Plugs {
@@ -67,41 +63,40 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 			// fmt.Printf("Bucket: %s, region: %s\n", *bucket.Name, bucketRegion)
 			bucketResource.Identifier = *bucket.Name
 
-			tagsOutput, err := client.GetBucketTagging(
-				context.Background(),
-				&s3.GetBucketTaggingInput{
-					Bucket: bucket.Name,
-				},
-			)
+			// Get bucket tags
+			taggingProperties, err := getTaggingProperties(client, &bucket)
 			if err != nil {
-				var apiErr smithy.APIError
-				if ok := errors.As(err, &apiErr); ok {
-					switch apiErr.ErrorCode() {
-					case "NoSuchTagSet":
-						log.Println("No tags found")
-						// continue
-					default:
-						log.Printf(
-							"Error code: %s, Error message: %s\n",
-							apiErr.ErrorCode(),
-							apiErr.ErrorMessage(),
-						)
-						// continue
-					}
+				var configErr *mmS3Error
+				if errors.As(err, &configErr) {
+					log.Println("No tags found")
 				} else {
 					log.Printf("Failed to get bucket tags, %v", err)
-					// continue
 				}
 			} else {
-				for _, tag := range tagsOutput.TagSet {
-					log.Printf("Tag name: %s, value: %s\n", *tag.Key, *tag.Value)
-					bucketResource.Properties = append(bucketResource.Properties, shared.MinerProperty{
-						Type:  "tag",
-						Name:  *tag.Key,
-						Value: *tag.Value,
-					})
-				}
+				bucketResource.Properties = append(bucketResource.Properties, taggingProperties...)
 			}
+
+			// Get the bucket accelerate configuration
+			accelerateProperty, err := getAccelerateProperty(client, &bucket)
+			if err != nil {
+				var configErr *mmS3Error
+				if errors.As(err, &configErr) {
+					log.Println("No accelerate configuration found")
+				} else {
+					log.Printf("Failed to get accelerate configuration, %v", err)
+				}
+			} else {
+				bucketResource.Properties = append(bucketResource.Properties, accelerateProperty)
+			}
+
+			// Get the bucket ACL properties
+			aclProperties, err := getAclProperties(client, &bucket)
+			if err != nil {
+				log.Printf("Failed to get ACL properties, %v", err)
+			} else {
+				bucketResource.Properties = append(bucketResource.Properties, aclProperties...)
+			}
+
 			resources = append(resources, bucketResource)
 		}
 	}
