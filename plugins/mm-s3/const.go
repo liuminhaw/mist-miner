@@ -4,10 +4,12 @@ import "fmt"
 
 const (
 	accelerateConfig = "AccelerateConfig"
-    acl              = "Acl"
+	acl              = "Acl"
+	cors             = "CORS"
+	encryption       = "Encryption"
 	tagging          = "Tag"
 	noConfig         = "NoConfiguration"
-    valueSeparator   = "|"
+	valueSeparator   = "|"
 )
 
 type mmS3Error struct {

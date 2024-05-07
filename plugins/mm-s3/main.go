@@ -97,6 +97,27 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				bucketResource.Properties = append(bucketResource.Properties, aclProperties...)
 			}
 
+			// Get the bucket CORS properties
+			corsProperties, err := getCorsProperties(client, &bucket)
+			if err != nil {
+				var configErr *mmS3Error
+				if errors.As(err, &configErr) {
+					log.Println("No CORS configuration found")
+				} else {
+					log.Printf("Failed to get CORS properties, %v", err)
+				}
+			} else {
+				bucketResource.Properties = append(bucketResource.Properties, corsProperties...)
+			}
+
+			// Get the bucket encryption properties
+			encryptionProperties, err := getEncryptionProperties(client, &bucket)
+			if err != nil {
+				log.Printf("Failed to get encryption properties, %v", err)
+			} else {
+				bucketResource.Properties = append(bucketResource.Properties, encryptionProperties...)
+			}
+
 			resources = append(resources, bucketResource)
 		}
 	}

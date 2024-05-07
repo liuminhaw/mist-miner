@@ -213,35 +213,35 @@ func ReadMark(group, mapHash string) (*LabelMark, error) {
 	}
 	defer f.Close()
 
-    r, err := zlib.NewReader(f)
-    if err != nil {
-        return nil, fmt.Errorf("read label mark: create zlib reader: %w", err)
-    }
-    defer r.Close()
+	r, err := zlib.NewReader(f)
+	if err != nil {
+		return nil, fmt.Errorf("read label mark: create zlib reader: %w", err)
+	}
+	defer r.Close()
 
 	scanner := bufio.NewScanner(r)
 	// Scan the timestamp.
 	if ok := scanner.Scan(); ok {
-        mark.TimeStamp, err = time.Parse(time.RFC3339, scanner.Text()) 
-        if err != nil {
-            return nil, fmt.Errorf("read label mark: parse time: %w", err)
-        }
+		mark.TimeStamp, err = time.Parse(time.RFC3339, scanner.Text())
+		if err != nil {
+			return nil, fmt.Errorf("read label mark: parse time: %w", err)
+		}
 	}
-    // Scan the parent hash.
-    if ok := scanner.Scan(); ok {
-        mark.Parent = scanner.Text()
-    }
-    // Scan the mappings.
-    for scanner.Scan() {
+	// Scan the parent hash.
+	if ok := scanner.Scan(); ok {
+		mark.Parent = scanner.Text()
+	}
+	// Scan the mappings.
+	for scanner.Scan() {
 		line := scanner.Text()
-        fields := strings.Fields(line)
-        if len(fields) != 2 {
-            return nil, fmt.Errorf("read label mark: invalid mapping: %s", line)
-        }
-        mark.Mappings = append(mark.Mappings, MarkMapping{
-            Hash:   fields[0],
-            Module: fields[1],
-        })
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			return nil, fmt.Errorf("read label mark: invalid mapping: %s", line)
+		}
+		mark.Mappings = append(mark.Mappings, MarkMapping{
+			Hash:   fields[0],
+			Module: fields[1],
+		})
 	}
 
 	return &mark, nil

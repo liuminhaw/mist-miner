@@ -123,7 +123,7 @@ func main() {
 	l := list.New(items, itemDelegate{}, 0, 0)
 	// l.InfiniteScrolling = true
 	l.Title = "What do you want for dinner?"
-    l.SetStatusBarItemName("entry", "entries")
+	l.SetStatusBarItemName("entry", "entries")
 	l.SetFilteringEnabled(false)
 	l.Styles.StatusBar = statusStyle
 	l.Styles.Title = titleStyle

@@ -22,26 +22,26 @@ func getTaggingProperties(client *s3.Client, bucket *types.Bucket) ([]shared.Min
 	)
 	if err != nil {
 		var apiErr smithy.APIError
-        if ok := errors.As(err, &apiErr); ok {
-            switch apiErr.ErrorCode() {
-            case "NoSuchTagSet":
-                return nil, &mmS3Error{tagging, noConfig}
-            default:
-                return nil, fmt.Errorf("getTaggingProperties: %w", err)
-            }
-        } else {
-            return nil, fmt.Errorf("getTaggingProperties: %w", err)
-        }
+		if ok := errors.As(err, &apiErr); ok {
+			switch apiErr.ErrorCode() {
+			case "NoSuchTagSet":
+				return nil, &mmS3Error{tagging, noConfig}
+			default:
+				return nil, fmt.Errorf("getTaggingProperties: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("getTaggingProperties: %w", err)
+		}
 	}
 
-    var properties []shared.MinerProperty
-    for _, tag := range output.TagSet {
-        properties = append(properties, shared.MinerProperty{
-            Type:  tagging,
-            Name:  *tag.Key,
-            Value: *tag.Value,
-        })
-    }
+	var properties []shared.MinerProperty
+	for _, tag := range output.TagSet {
+		properties = append(properties, shared.MinerProperty{
+			Type:  tagging,
+			Name:  *tag.Key,
+			Value: *tag.Value,
+		})
+	}
 
-    return properties, nil
+	return properties, nil
 }
