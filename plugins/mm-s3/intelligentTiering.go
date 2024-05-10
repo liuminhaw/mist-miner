@@ -37,12 +37,18 @@ func getIntelligentTieringProperties(
 				err,
 			)
 		}
-        configValue := buffer.Bytes()
+		configValue := buffer.Bytes()
 
 		properties = append(properties, shared.MinerProperty{
 			Type: intelligentTiering,
-			Name: *config.Id,
-            Value: string(configValue),
+			Label: shared.MinerPropertyLabel{
+				Name:   *config.Id,
+				Unique: true,
+			},
+			Content: shared.MinerPropertyContent{
+				Format: "json",
+				Value:  string(configValue),
+			},
 		})
 	}
 

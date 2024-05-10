@@ -32,9 +32,15 @@ func getAclProperties(client *s3.Client, bucket *types.Bucket) ([]shared.MinerPr
 
 	var properties []shared.MinerProperty
 	properties = append(properties, shared.MinerProperty{
-		Type:  acl,
-		Name:  "Owner",
-		Value: *output.Owner.ID,
+		Type: acl,
+		Label: shared.MinerPropertyLabel{
+			Name:   "Owner",
+			Unique: true,
+		},
+		Content: shared.MinerPropertyContent{
+			Format: "string",
+			Value:  *output.Owner.ID,
+		},
 	})
 
 	for _, grant := range output.Grants {
@@ -61,11 +67,22 @@ func getAclProperties(client *s3.Client, bucket *types.Bucket) ([]shared.MinerPr
 
 		properties = append(properties, shared.MinerProperty{
 			Type: acl,
-			Name: "Grantee",
-			Value: strings.Join(
-				[]string{grantee.displayName, grantee.granteeType, grantee.id, grantee.permission},
-				valueSeparator,
-			),
+			Label: shared.MinerPropertyLabel{
+				Name:   "Grantee",
+				Unique: false,
+			},
+			Content: shared.MinerPropertyContent{
+				Format: "string",
+				Value: strings.Join(
+					[]string{
+						grantee.displayName,
+						grantee.granteeType,
+						grantee.id,
+						grantee.permission,
+					},
+					valueSeparator,
+				),
+			},
 		})
 	}
 

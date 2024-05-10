@@ -51,9 +51,15 @@ func getCorsProperties(client *s3.Client, bucket *types.Bucket) ([]shared.MinerP
 		h.Write(corsValue)
 
 		properties = append(properties, shared.MinerProperty{
-			Type:  cors,
-			Name:  fmt.Sprintf("%x", h.Sum(nil)),
-			Value: string(corsValue),
+			Type: cors,
+			Label: shared.MinerPropertyLabel{
+				Name:   fmt.Sprintf("%x", h.Sum(nil)),
+				Unique: false,
+			},
+			Content: shared.MinerPropertyContent{
+				Format: "json",
+				Value:  string(corsValue),
+			},
 		})
 	}
 

@@ -29,9 +29,15 @@ func (m *GRPCClient) Mine(config MinerConfig) (MinerResources, error) {
 		}
 		for _, data := range resource.Properties {
 			minerResource.Properties = append(minerResource.Properties, MinerProperty{
-				Type:  data.Type,
-				Name:  data.Name,
-				Value: data.Value,
+				Type: data.Type,
+				Label: MinerPropertyLabel{
+					Name:   data.Label.Name,
+					Unique: data.Label.Unique,
+				},
+				Content: MinerPropertyContent{
+					Format: data.Content.Format,
+					Value:  data.Content.Value,
+				},
 			})
 		}
 		minerResources = append(minerResources, minerResource)
@@ -47,7 +53,10 @@ type GRPCServer struct {
 	Impl Miner
 }
 
-func (m *GRPCServer) Mine(ctx context.Context, req *proto.MinerConfig) (*proto.MinerResources, error) {
+func (m *GRPCServer) Mine(
+	ctx context.Context,
+	req *proto.MinerConfig,
+) (*proto.MinerResources, error) {
 	// func (m *GRPCServer) Mine(ctx context.Context, req *proto.NoParam) (*proto.MinerResources, error) {
 	protoResources := []*proto.MinerResource{}
 
@@ -60,9 +69,15 @@ func (m *GRPCServer) Mine(ctx context.Context, req *proto.MinerConfig) (*proto.M
 		}
 		for _, data := range resource.Properties {
 			protoResource.Properties = append(protoResource.Properties, &proto.MinerProperty{
-				Type:  data.Type,
-				Name:  data.Name,
-				Value: data.Value,
+				Type: data.Type,
+				Label: &proto.MinerPropertyLabel{
+					Name:   data.Label.Name,
+					Unique: data.Label.Unique,
+				},
+				Content: &proto.MinerPropertyContent{
+					Format: data.Content.Format,
+					Value:  data.Content.Value,
+				},
 			})
 		}
 		protoResources = append(protoResources, &protoResource)

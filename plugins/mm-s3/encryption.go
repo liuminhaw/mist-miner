@@ -53,11 +53,17 @@ func getEncryptionProperties(
 
 		properties = append(properties, shared.MinerProperty{
 			Type: encryption,
-			Name: "Rule",
-			Value: strings.Join(
-				[]string{config.sse, config.kmsId, config.bucketKey},
-				valueSeparator,
-			),
+			Label: shared.MinerPropertyLabel{
+				Name:   "Rule",
+				Unique: false,
+			},
+			Content: shared.MinerPropertyContent{
+				Format: "string",
+				Value: strings.Join(
+					[]string{config.sse, config.kmsId, config.bucketKey},
+					valueSeparator,
+				),
+			},
 		})
 
 	}

@@ -13,10 +13,20 @@ type MinerConfig struct {
 	Path string
 }
 
+type MinerPropertyLabel struct {
+	Name   string
+	Unique bool
+}
+
+type MinerPropertyContent struct {
+	Format string
+	Value  string
+}
+
 type MinerProperty struct {
-	Type  string
-	Name  string
-	Value string
+	Type    string
+	Label   MinerPropertyLabel
+	Content MinerPropertyContent
 }
 
 type MinerResource struct {

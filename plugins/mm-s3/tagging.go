@@ -37,9 +37,15 @@ func getTaggingProperties(client *s3.Client, bucket *types.Bucket) ([]shared.Min
 	var properties []shared.MinerProperty
 	for _, tag := range output.TagSet {
 		properties = append(properties, shared.MinerProperty{
-			Type:  tagging,
-			Name:  *tag.Key,
-			Value: *tag.Value,
+			Type: tagging,
+			Label: shared.MinerPropertyLabel{
+				Name:   *tag.Key,
+				Unique: true,
+			},
+			Content: shared.MinerPropertyContent{
+				Format: "string",
+				Value:  *tag.Value,
+			},
 		})
 	}
 

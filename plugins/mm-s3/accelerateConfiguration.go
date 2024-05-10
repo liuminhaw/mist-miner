@@ -29,8 +29,14 @@ func getAccelerateProperty(client *s3.Client, bucket *types.Bucket) (shared.Mine
 	}
 
 	return shared.MinerProperty{
-		Type:  accelerateConfig,
-		Name:  "Status",
-		Value: string(output.Status),
+		Type: accelerateConfig,
+		Label: shared.MinerPropertyLabel{
+			Name:   "Status",
+			Unique: true,
+		},
+		Content: shared.MinerPropertyContent{
+			Format: "string",
+			Value:  string(output.Status),
+		},
 	}, nil
 }

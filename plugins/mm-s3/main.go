@@ -118,13 +118,13 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				bucketResource.Properties = append(bucketResource.Properties, encryptionProperties...)
 			}
 
-            // Get the bucket intelligent tiering properties
-            intelligentTieringProperties, err := getIntelligentTieringProperties(client, &bucket)
-            if err != nil {
-                log.Printf("Failed to get intelligent tiering properties, %v", err)
-            } else {
-                bucketResource.Properties = append(bucketResource.Properties, intelligentTieringProperties...)
-            }
+			// Get the bucket intelligent tiering properties
+			intelligentTieringProperties, err := getIntelligentTieringProperties(client, &bucket)
+			if err != nil {
+				log.Printf("Failed to get intelligent tiering properties, %v", err)
+			} else {
+				bucketResource.Properties = append(bucketResource.Properties, intelligentTieringProperties...)
+			}
 
 			resources = append(resources, bucketResource)
 		}
