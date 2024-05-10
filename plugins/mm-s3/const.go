@@ -8,6 +8,8 @@ const (
 	cors               = "CORS"
 	encryption         = "Encryption"
 	intelligentTiering = "IntelligentTiering"
+	inventory          = "Inventory"
+	lifecycle          = "Lifecycle"
 	tagging            = "Tag"
 	noConfig           = "NoConfiguration"
 	valueSeparator     = "|"

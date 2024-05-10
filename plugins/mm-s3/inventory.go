@@ -11,8 +11,7 @@ import (
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
-// getIntelligentTieringProperties returns the intelligent tiering properties of a bucket
-func getIntelligentTieringProperties(
+func getInventoryProperties(
 	client *s3.Client,
 	bucket *types.Bucket,
 ) ([]shared.MinerProperty, error) {
@@ -20,31 +19,31 @@ func getIntelligentTieringProperties(
 
 	contToken := ""
 	for {
-		output, err := client.ListBucketIntelligentTieringConfigurations(
+		output, err := client.ListBucketInventoryConfigurations(
 			context.Background(),
-			&s3.ListBucketIntelligentTieringConfigurationsInput{
+			&s3.ListBucketInventoryConfigurationsInput{
 				Bucket:            bucket.Name,
 				ContinuationToken: &contToken,
 			},
 		)
 		if err != nil {
-			return nil, fmt.Errorf("getIntelligentTieringProperties: %w", err)
+			return nil, fmt.Errorf("getInventoryProperties: %w", err)
 		}
 
-		for _, config := range output.IntelligentTieringConfigurationList {
+		for _, config := range output.InventoryConfigurationList {
 			buffer := new(bytes.Buffer)
 			encoder := json.NewEncoder(buffer)
 			encoder.SetEscapeHTML(false)
 			if err := encoder.Encode(config); err != nil {
 				return nil, fmt.Errorf(
-					"getIntelligentTieringProperties: marshal IntelligentTiering config: %w",
+					"getInventoryProperties: marshal Inventory config: %w",
 					err,
 				)
 			}
 			configValue := buffer.Bytes()
 
 			properties = append(properties, shared.MinerProperty{
-				Type: intelligentTiering,
+				Type: inventory,
 				Label: shared.MinerPropertyLabel{
 					Name:   *config.Id,
 					Unique: true,

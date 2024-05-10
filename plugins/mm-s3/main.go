@@ -126,6 +126,27 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				bucketResource.Properties = append(bucketResource.Properties, intelligentTieringProperties...)
 			}
 
+			// Get the bucket inventory properties
+			inventoryProperties, err := getInventoryProperties(client, &bucket)
+			if err != nil {
+				log.Printf("Failed to get inventory properties, %v", err)
+			} else {
+				bucketResource.Properties = append(bucketResource.Properties, inventoryProperties...)
+			}
+
+			// Get the bucket lifecycle properties
+			lifecycleProperties, err := getLifecycleProperties(client, &bucket)
+			if err != nil {
+				var configErr *mmS3Error
+				if errors.As(err, &configErr) {
+					log.Println("No lifecycle configuration found")
+				} else {
+					log.Printf("Failed to get lifecycle properties, %v", err)
+				}
+			} else {
+				bucketResource.Properties = append(bucketResource.Properties, lifecycleProperties...)
+			}
+
 			resources = append(resources, bucketResource)
 		}
 	}
