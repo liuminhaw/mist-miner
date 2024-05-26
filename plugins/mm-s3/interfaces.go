@@ -58,6 +58,12 @@ var propConstructors = map[string]propConstructor{
             bucket: bucket,
         }
     },
+    logging: func(client *s3.Client, bucket *types.Bucket) crawler {
+        return &loggingProp{
+            client: client,
+            bucket: bucket,
+        }
+    },
     tagging: func(client *s3.Client, bucket *types.Bucket) crawler {
         return &taggingProp{
             client: client,

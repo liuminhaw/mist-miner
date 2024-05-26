@@ -10,6 +10,8 @@ const (
 	intelligentTiering = "IntelligentTiering"
 	inventory          = "Inventory"
 	lifecycle          = "Lifecycle"
+    location           = "Location"
+    logging            = "Logging"
 	tagging            = "Tag"
 	noConfig           = "NoConfiguration"
 	valueSeparator     = "|"
@@ -26,6 +28,7 @@ var miningProperties = []string{
 	intelligentTiering,
     inventory,
 	lifecycle,
+    logging,
 	tagging,
 }
 

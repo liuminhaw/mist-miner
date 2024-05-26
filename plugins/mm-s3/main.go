@@ -60,8 +60,20 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 			)
 			client := s3.NewFromConfig(cfg)
 
-			// fmt.Printf("Bucket: %s, region: %s\n", *bucket.Name, bucketRegion)
 			bucketResource.Identifier = *bucket.Name
+
+            // Add location (region) property
+            bucketResource.Properties = append(bucketResource.Properties, shared.MinerProperty{
+                Type: location,
+                Label: shared.MinerPropertyLabel{
+                    Name: "Region",
+                    Unique: true,
+                },
+                Content: shared.MinerPropertyContent{
+                    Format: formatText,
+                    Value:  bucketRegion,
+                },
+            })
 
 			for _, propType := range miningProperties {
 				propsCrawler, err := New(client, &bucket, propType)
@@ -105,20 +117,13 @@ func main() {
 }
 
 // getBucketRegion returns the region of the bucket
-// if the bucket is in the US East (N. Virginia) region, the region is empty
-// so we return us-east-1
 func getBucketRegion(client *s3.Client, bucket string) (string, error) {
-	result, err := client.GetBucketLocation(context.Background(), &s3.GetBucketLocationInput{
+	result, err := client.HeadBucket(context.Background(), &s3.HeadBucketInput{
 		Bucket: &bucket,
 	})
 	if err != nil {
 		return "", fmt.Errorf("getBucketRegion: %w", err)
 	}
 
-	region := string(result.LocationConstraint)
-	if region == "" {
-		region = "us-east-1"
-	}
-
-	return region, nil
+	return *result.BucketRegion, nil
 }
