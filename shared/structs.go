@@ -2,6 +2,7 @@ package shared
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -34,7 +35,20 @@ type MinerResource struct {
 	Properties []MinerProperty
 }
 
+func (m *MinerResource) Sort() {
+    sort.SliceStable(m.Properties, func(i, j int) bool {
+        if m.Properties[i].Type == m.Properties[j].Type {
+            if m.Properties[i].Label.Name == m.Properties[j].Label.Name {
+                return m.Properties[i].Content.Value < m.Properties[j].Content.Value
+            }
+            return m.Properties[i].Label.Name < m.Properties[j].Label.Name
+        }
+        return m.Properties[i].Type < m.Properties[j].Type
+    })
+}
+
 type MinerResources []MinerResource
+
 
 // HCL config structure
 type HclConfig struct {

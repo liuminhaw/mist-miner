@@ -63,90 +63,25 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 			// fmt.Printf("Bucket: %s, region: %s\n", *bucket.Name, bucketRegion)
 			bucketResource.Identifier = *bucket.Name
 
-			// Get bucket tags
-			taggingProperties, err := getTaggingProperties(client, &bucket)
-			if err != nil {
-				var configErr *mmS3Error
-				if errors.As(err, &configErr) {
-					log.Println("No tags found")
-				} else {
-					log.Printf("Failed to get bucket tags, %v", err)
+			for _, propType := range miningProperties {
+				propsCrawler, err := New(client, &bucket, propType)
+				if err != nil {
+					return nil, fmt.Errorf("Failed to create new crawler: %w", err)
 				}
-			} else {
-				bucketResource.Properties = append(bucketResource.Properties, taggingProperties...)
-			}
-
-			// Get the bucket accelerate configuration
-			accelerateProperty, err := getAccelerateProperty(client, &bucket)
-			if err != nil {
-				var configErr *mmS3Error
-				if errors.As(err, &configErr) {
-					log.Println("No accelerate configuration found")
+				properties, err := propsCrawler.generate()
+				if err != nil {
+					var configErr *mmS3Error
+					if errors.As(err, &configErr) {
+						log.Printf("No %s configuration found", propType)
+					} else {
+						log.Printf("Failed to get %s properties: %v", propType, err)
+					}
 				} else {
-					log.Printf("Failed to get accelerate configuration, %v", err)
+					bucketResource.Properties = append(bucketResource.Properties, properties...)
 				}
-			} else {
-				bucketResource.Properties = append(bucketResource.Properties, accelerateProperty)
 			}
 
-			// Get the bucket ACL properties
-			aclProperties, err := getAclProperties(client, &bucket)
-			if err != nil {
-				log.Printf("Failed to get ACL properties, %v", err)
-			} else {
-				bucketResource.Properties = append(bucketResource.Properties, aclProperties...)
-			}
-
-			// Get the bucket CORS properties
-			corsProperties, err := getCorsProperties(client, &bucket)
-			if err != nil {
-				var configErr *mmS3Error
-				if errors.As(err, &configErr) {
-					log.Println("No CORS configuration found")
-				} else {
-					log.Printf("Failed to get CORS properties, %v", err)
-				}
-			} else {
-				bucketResource.Properties = append(bucketResource.Properties, corsProperties...)
-			}
-
-			// Get the bucket encryption properties
-			encryptionProperties, err := getEncryptionProperties(client, &bucket)
-			if err != nil {
-				log.Printf("Failed to get encryption properties, %v", err)
-			} else {
-				bucketResource.Properties = append(bucketResource.Properties, encryptionProperties...)
-			}
-
-			// Get the bucket intelligent tiering properties
-			intelligentTieringProperties, err := getIntelligentTieringProperties(client, &bucket)
-			if err != nil {
-				log.Printf("Failed to get intelligent tiering properties, %v", err)
-			} else {
-				bucketResource.Properties = append(bucketResource.Properties, intelligentTieringProperties...)
-			}
-
-			// Get the bucket inventory properties
-			inventoryProperties, err := getInventoryProperties(client, &bucket)
-			if err != nil {
-				log.Printf("Failed to get inventory properties, %v", err)
-			} else {
-				bucketResource.Properties = append(bucketResource.Properties, inventoryProperties...)
-			}
-
-			// Get the bucket lifecycle properties
-			lifecycleProperties, err := getLifecycleProperties(client, &bucket)
-			if err != nil {
-				var configErr *mmS3Error
-				if errors.As(err, &configErr) {
-					log.Println("No lifecycle configuration found")
-				} else {
-					log.Printf("Failed to get lifecycle properties, %v", err)
-				}
-			} else {
-				bucketResource.Properties = append(bucketResource.Properties, lifecycleProperties...)
-			}
-
+			bucketResource.Sort()
 			resources = append(resources, bucketResource)
 		}
 	}

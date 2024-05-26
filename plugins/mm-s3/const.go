@@ -13,7 +13,21 @@ const (
 	tagging            = "Tag"
 	noConfig           = "NoConfiguration"
 	valueSeparator     = "|"
+
+	formatJson = "json"
+	formatText = "text"
 )
+
+var miningProperties = []string{
+	accelerateConfig,
+	acl,
+    cors,
+    encryption,
+	intelligentTiering,
+    inventory,
+	lifecycle,
+	tagging,
+}
 
 type mmS3Error struct {
 	category string

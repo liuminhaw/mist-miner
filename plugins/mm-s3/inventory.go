@@ -11,34 +11,44 @@ import (
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
-func getInventoryProperties(
-	client *s3.Client,
-	bucket *types.Bucket,
-) ([]shared.MinerProperty, error) {
+type inventoryProp struct {
+	client         *s3.Client
+	bucket         *types.Bucket
+	configurations *s3.ListBucketInventoryConfigurationsOutput
+	requestToken   string
+}
+
+func (ip *inventoryProp) fetchConf() error {
+	output, err := ip.client.ListBucketInventoryConfigurations(
+		context.Background(),
+		&s3.ListBucketInventoryConfigurationsInput{
+			Bucket:            ip.bucket.Name,
+			ContinuationToken: &ip.requestToken,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("fetchConf inventory: %w", err)
+	}
+
+	ip.configurations = output
+	return nil
+}
+
+func (ip *inventoryProp) generate() ([]shared.MinerProperty, error) {
 	var properties []shared.MinerProperty
 
-	contToken := ""
+	ip.requestToken = ""
 	for {
-		output, err := client.ListBucketInventoryConfigurations(
-			context.Background(),
-			&s3.ListBucketInventoryConfigurationsInput{
-				Bucket:            bucket.Name,
-				ContinuationToken: &contToken,
-			},
-		)
-		if err != nil {
-			return nil, fmt.Errorf("getInventoryProperties: %w", err)
+		if err := ip.fetchConf(); err != nil {
+			return nil, fmt.Errorf("generate invnetory: %w", err)
 		}
 
-		for _, config := range output.InventoryConfigurationList {
+		for _, config := range ip.configurations.InventoryConfigurationList {
 			buffer := new(bytes.Buffer)
 			encoder := json.NewEncoder(buffer)
 			encoder.SetEscapeHTML(false)
 			if err := encoder.Encode(config); err != nil {
-				return nil, fmt.Errorf(
-					"getInventoryProperties: marshal Inventory config: %w",
-					err,
-				)
+				return nil, fmt.Errorf("generate inventory: marshal config: %w", err)
 			}
 			configValue := buffer.Bytes()
 
@@ -49,14 +59,14 @@ func getInventoryProperties(
 					Unique: true,
 				},
 				Content: shared.MinerPropertyContent{
-					Format: "json",
+					Format: formatJson,
 					Value:  string(configValue),
 				},
 			})
 		}
 
-		if *output.IsTruncated {
-			contToken = *output.NextContinuationToken
+		if *ip.configurations.IsTruncated {
+			ip.requestToken = *ip.configurations.NextContinuationToken
 		} else {
 			break
 		}

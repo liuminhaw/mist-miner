@@ -1,55 +1,49 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
-type encryptionConfig struct {
-	sse       string
-	kmsId     string
-	bucketKey string
+type encryptionProp struct {
+	client         *s3.Client
+	bucket         *types.Bucket
+	configurations *s3.GetBucketEncryptionOutput
 }
 
-// Value: ServerSideEncryption|KMSMasterKeyID|BucketKeyEnabled
-func getEncryptionProperties(
-	client *s3.Client,
-	bucket *types.Bucket,
-) ([]shared.MinerProperty, error) {
-	output, err := client.GetBucketEncryption(context.Background(), &s3.GetBucketEncryptionInput{
-		Bucket: bucket.Name,
+func (ep *encryptionProp) fetchConf() error {
+	output, err := ep.client.GetBucketEncryption(context.Background(), &s3.GetBucketEncryptionInput{
+		Bucket: ep.bucket.Name,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("getEncryptionProperties: %w", err)
+		return fmt.Errorf("fetchConf encryption: %w", err)
 	}
 
-	var properties []shared.MinerProperty
-	for _, rule := range output.ServerSideEncryptionConfiguration.Rules {
-		config := encryptionConfig{}
-		// Check nil
-		if rule.BucketKeyEnabled == nil {
-			log.Printf("BucketKeyEnabled is nil")
-			config.bucketKey = ""
-		} else if *rule.BucketKeyEnabled {
-			config.bucketKey = "true"
-		} else {
-			config.bucketKey = "false"
-		}
+	ep.configurations = output
+	return nil
+}
 
-		if rule.ApplyServerSideEncryptionByDefault == nil {
-			log.Printf("ApplyServerSideEncryptionByDefault is nil")
-		} else if rule.ApplyServerSideEncryptionByDefault.SSEAlgorithm == types.ServerSideEncryptionAes256 {
-			config.sse = string(rule.ApplyServerSideEncryptionByDefault.SSEAlgorithm)
-		} else {
-			config.sse = string(rule.ApplyServerSideEncryptionByDefault.SSEAlgorithm)
-			config.kmsId = *rule.ApplyServerSideEncryptionByDefault.KMSMasterKeyID
+func (ep *encryptionProp) generate() ([]shared.MinerProperty, error) {
+	var properties []shared.MinerProperty
+
+	if err := ep.fetchConf(); err != nil {
+		return nil, fmt.Errorf("generate encryptionProp: %w", err)
+	}
+
+	for _, rule := range ep.configurations.ServerSideEncryptionConfiguration.Rules {
+		buffer := new(bytes.Buffer)
+		encoder := json.NewEncoder(buffer)
+		encoder.SetEscapeHTML(false)
+		if err := encoder.Encode(rule); err != nil {
+			return nil, fmt.Errorf("generate encryptionProp: marshal rule: %w", err)
 		}
+		ruleValue := buffer.Bytes()
 
 		properties = append(properties, shared.MinerProperty{
 			Type: encryption,
@@ -58,14 +52,10 @@ func getEncryptionProperties(
 				Unique: false,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: "string",
-				Value: strings.Join(
-					[]string{config.sse, config.kmsId, config.bucketKey},
-					valueSeparator,
-				),
+				Format: formatJson,
+				Value:  string(ruleValue),
 			},
 		})
-
 	}
 
 	return properties, nil

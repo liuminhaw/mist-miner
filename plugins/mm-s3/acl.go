@@ -1,36 +1,44 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
-type aclGrantee struct {
-	displayName string
-	granteeType string
-	id          string
-	permission  string
+type aclProp struct {
+	client         *s3.Client
+	bucket         *types.Bucket
+	configurations *s3.GetBucketAclOutput
 }
 
-// getAclProperties retrieves the ACL properties of a bucket.
-// Grantee value is combined with displayName, granteeType, id, and permission separated by `valueSeparator`.
-func getAclProperties(client *s3.Client, bucket *types.Bucket) ([]shared.MinerProperty, error) {
-	output, err := client.GetBucketAcl(
+func (aclP *aclProp) fetchConf() error {
+	output, err := aclP.client.GetBucketAcl(
 		context.Background(),
 		&s3.GetBucketAclInput{
-			Bucket: bucket.Name,
+			Bucket: aclP.bucket.Name,
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("getAclProperties: %w", err)
+		return fmt.Errorf("getAclProperties: %w", err)
 	}
 
+	aclP.configurations = output
+	return nil
+}
+
+func (aclP *aclProp) generate() ([]shared.MinerProperty, error) {
 	var properties []shared.MinerProperty
+
+	if err := aclP.fetchConf(); err != nil {
+		return nil, fmt.Errorf("generate aclProp: %w", err)
+	}
+
 	properties = append(properties, shared.MinerProperty{
 		Type: acl,
 		Label: shared.MinerPropertyLabel{
@@ -38,32 +46,18 @@ func getAclProperties(client *s3.Client, bucket *types.Bucket) ([]shared.MinerPr
 			Unique: true,
 		},
 		Content: shared.MinerPropertyContent{
-			Format: "string",
-			Value:  *output.Owner.ID,
+			Format: formatText,
+			Value:  *aclP.configurations.Owner.ID,
 		},
 	})
-
-	for _, grant := range output.Grants {
-
-		grantee := aclGrantee{
-			permission: string(grant.Permission),
+	for _, grant := range aclP.configurations.Grants {
+		buffer := new(bytes.Buffer)
+		encoder := json.NewEncoder(buffer)
+		encoder.SetEscapeHTML(false)
+		if err := encoder.Encode(grant); err != nil {
+			return nil, fmt.Errorf("generate aclProp: marshal grant: %w", err)
 		}
-		if grant.Grantee.DisplayName != nil {
-			grantee.displayName = *grant.Grantee.DisplayName
-		}
-		switch grant.Grantee.Type {
-		case types.TypeCanonicalUser:
-			grantee.granteeType = string(types.TypeCanonicalUser)
-			grantee.id = *grant.Grantee.ID
-		case types.TypeGroup:
-			grantee.granteeType = string(types.TypeGroup)
-			grantee.id = *grant.Grantee.URI
-		case types.TypeAmazonCustomerByEmail:
-			grantee.granteeType = string(types.TypeAmazonCustomerByEmail)
-			grantee.id = *grant.Grantee.EmailAddress
-		default:
-			return nil, fmt.Errorf("getAclProperties: unknown grantee type: %s", grant.Grantee.Type)
-		}
+		grantValue := buffer.Bytes()
 
 		properties = append(properties, shared.MinerProperty{
 			Type: acl,
@@ -72,16 +66,8 @@ func getAclProperties(client *s3.Client, bucket *types.Bucket) ([]shared.MinerPr
 				Unique: false,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: "string",
-				Value: strings.Join(
-					[]string{
-						grantee.displayName,
-						grantee.granteeType,
-						grantee.id,
-						grantee.permission,
-					},
-					valueSeparator,
-				),
+				Format: formatJson,
+				Value:  string(grantValue),
 			},
 		})
 	}

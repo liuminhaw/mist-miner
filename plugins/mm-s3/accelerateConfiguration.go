@@ -9,34 +9,47 @@ import (
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
-// getTaggingProperties retrieves the tagging properties of a bucket.
-// Property list:
-// - Type: accelerateConfig
-// - Name: status
-func getAccelerateProperty(client *s3.Client, bucket *types.Bucket) (shared.MinerProperty, error) {
-	output, err := client.GetBucketAccelerateConfiguration(
+type accelerateProp struct {
+	client         *s3.Client
+	bucket         *types.Bucket
+	configurations *s3.GetBucketAccelerateConfigurationOutput
+}
+
+func (a *accelerateProp) fetchConf() error {
+	output, err := a.client.GetBucketAccelerateConfiguration(
 		context.Background(),
 		&s3.GetBucketAccelerateConfigurationInput{
-			Bucket: bucket.Name,
+			Bucket: a.bucket.Name,
 		},
 	)
 	if err != nil {
-		return shared.MinerProperty{}, fmt.Errorf("getAccelerateProperty: %w", err)
+		return fmt.Errorf("getAccelerateProperty: %w", err)
 	}
 
-	if output.Status == "" {
-		return shared.MinerProperty{}, &mmS3Error{accelerateConfig, noConfig}
+	a.configurations = output
+	return nil
+}
+
+func (a *accelerateProp) generate() ([]shared.MinerProperty, error) {
+	if err := a.fetchConf(); err != nil {
+		return nil, fmt.Errorf("generate accelerateProp: %w", err)
 	}
 
-	return shared.MinerProperty{
-		Type: accelerateConfig,
-		Label: shared.MinerPropertyLabel{
-			Name:   "Status",
-			Unique: true,
-		},
-		Content: shared.MinerPropertyContent{
-			Format: "string",
-			Value:  string(output.Status),
+	if a.configurations.Status == "" {
+		return []shared.MinerProperty{}, &mmS3Error{accelerateConfig, noConfig}
+	}
+
+	return []shared.MinerProperty{
+		{
+			Type: accelerateConfig,
+			Label: shared.MinerPropertyLabel{
+				Name:   "Status",
+				Unique: true,
+			},
+			Content: shared.MinerPropertyContent{
+				Format: formatText,
+				Value:  string(a.configurations.Status),
+			},
 		},
 	}, nil
 }

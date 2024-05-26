@@ -15,12 +15,17 @@ import (
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
-// getEncryptionProperties returns the encryption properties of a bucket
-func getCorsProperties(client *s3.Client, bucket *types.Bucket) ([]shared.MinerProperty, error) {
-	output, err := client.GetBucketCors(
+type corsProp struct {
+    client         *s3.Client
+    bucket         *types.Bucket
+    configurations *s3.GetBucketCorsOutput
+}
+
+func (cp *corsProp) fetchConf() error {
+	output, err := cp.client.GetBucketCors(
 		context.Background(),
 		&s3.GetBucketCorsInput{
-			Bucket: bucket.Name,
+			Bucket: cp.bucket.Name,
 		},
 	)
 	if err != nil {
@@ -28,22 +33,31 @@ func getCorsProperties(client *s3.Client, bucket *types.Bucket) ([]shared.MinerP
 		if ok := errors.As(err, &apiErr); ok {
 			switch apiErr.ErrorCode() {
 			case "NoSuchCORSConfiguration":
-				return nil, &mmS3Error{cors, noConfig}
+				return &mmS3Error{cors, noConfig}
 			default:
-				return nil, fmt.Errorf("getCorsProperties: %w", err)
+				return fmt.Errorf("fetchConf corsProp: %w", err)
 			}
 		}
-		return nil, fmt.Errorf("getCorsProperties: %w", err)
+		return fmt.Errorf("fetchConf corsProp: %w", err)
 	}
 
+    cp.configurations = output
+    return nil
+}
+
+func (cp *corsProp) generate() ([]shared.MinerProperty, error) {
 	var properties []shared.MinerProperty
-	for _, rule := range output.CORSRules {
+
+    if err := cp.fetchConf(); err != nil {
+        return nil, fmt.Errorf("generate corsProp: %w", err)
+    }
+	for _, rule := range cp.configurations.CORSRules {
 		sortCorsRule(&rule)
 		buffer := new(bytes.Buffer)
 		encoder := json.NewEncoder(buffer)
 		encoder.SetEscapeHTML(false)
 		if err := encoder.Encode(rule); err != nil {
-			return nil, fmt.Errorf("getCorsProperties: marshal CORS rule: %w", err)
+			return nil, fmt.Errorf("generate corsProp: marshal rule: %w", err)
 		}
 
 		corsValue := buffer.Bytes()

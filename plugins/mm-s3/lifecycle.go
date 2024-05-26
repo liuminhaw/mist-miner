@@ -13,14 +13,17 @@ import (
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
-func getLifecycleProperties(
-	client *s3.Client,
-	bucket *types.Bucket,
-) ([]shared.MinerProperty, error) {
-	output, err := client.GetBucketLifecycleConfiguration(
+type lifecycleProp struct {
+	client         *s3.Client
+	bucket         *types.Bucket
+	configurations *s3.GetBucketLifecycleConfigurationOutput
+}
+
+func (l *lifecycleProp) fetchConf() error {
+	output, err := l.client.GetBucketLifecycleConfiguration(
 		context.Background(),
 		&s3.GetBucketLifecycleConfigurationInput{
-			Bucket: bucket.Name,
+			Bucket: l.bucket.Name,
 		},
 	)
 	if err != nil {
@@ -28,22 +31,31 @@ func getLifecycleProperties(
 		if ok := errors.As(err, &apiErr); ok {
 			switch apiErr.ErrorCode() {
 			case "NoSuchLifecycleConfiguration":
-				return nil, &mmS3Error{lifecycle, noConfig}
+				return &mmS3Error{lifecycle, noConfig}
 			default:
-				return nil, fmt.Errorf("getLifeCycleProperties: %w", err)
+				return fmt.Errorf("fetchConf lifecycle: %w", err)
 			}
 		}
-		return nil, fmt.Errorf("getLifeCycleProperties: %w", err)
+		return fmt.Errorf("fetchConf lifecycle: %w", err)
 	}
 
+	l.configurations = output
+	return nil
+}
+
+func (l *lifecycleProp) generate() ([]shared.MinerProperty, error) {
 	var properties []shared.MinerProperty
-	for _, rule := range output.Rules {
+
+	if err := l.fetchConf(); err != nil {
+		return nil, fmt.Errorf("generate lifecycleProp: %w", err)
+	}
+	for _, rule := range l.configurations.Rules {
 		buffer := new(bytes.Buffer)
 		encoder := json.NewEncoder(buffer)
 		encoder.SetEscapeHTML(false)
 		if err := encoder.Encode(rule); err != nil {
 			return nil, fmt.Errorf(
-				"getLifeCycleProperties: marshal LifeCycle rule: %w",
+				"generate lifecycleProp: marshal rule: %w",
 				err,
 			)
 		}
@@ -56,7 +68,7 @@ func getLifecycleProperties(
 				Unique: true,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: "json",
+				Format: formatJson,
 				Value:  string(ruleValue),
 			},
 		})
