@@ -62,18 +62,18 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 
 			bucketResource.Identifier = *bucket.Name
 
-            // Add location (region) property
-            bucketResource.Properties = append(bucketResource.Properties, shared.MinerProperty{
-                Type: location,
-                Label: shared.MinerPropertyLabel{
-                    Name: "Region",
-                    Unique: true,
-                },
-                Content: shared.MinerPropertyContent{
-                    Format: formatText,
-                    Value:  bucketRegion,
-                },
-            })
+			// Add location (region) property
+			bucketResource.Properties = append(bucketResource.Properties, shared.MinerProperty{
+				Type: location,
+				Label: shared.MinerPropertyLabel{
+					Name:   "Region",
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: formatText,
+					Value:  bucketRegion,
+				},
+			})
 
 			for _, propType := range miningProperties {
 				propsCrawler, err := New(client, &bucket, propType)

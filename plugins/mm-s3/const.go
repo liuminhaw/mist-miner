@@ -10,11 +10,14 @@ const (
 	intelligentTiering = "IntelligentTiering"
 	inventory          = "Inventory"
 	lifecycle          = "Lifecycle"
-    location           = "Location"
-    logging            = "Logging"
+	location           = "Location"
+	logging            = "Logging"
+	metrics            = "Metrics"
+	notification       = "Notification"
 	tagging            = "Tag"
-	noConfig           = "NoConfiguration"
-	valueSeparator     = "|"
+
+	noConfig       = "NoConfiguration"
+	valueSeparator = "|"
 
 	formatJson = "json"
 	formatText = "text"
@@ -23,12 +26,14 @@ const (
 var miningProperties = []string{
 	accelerateConfig,
 	acl,
-    cors,
-    encryption,
+	cors,
+	encryption,
 	intelligentTiering,
-    inventory,
+	inventory,
 	lifecycle,
-    logging,
+	logging,
+	metrics,
+	notification,
 	tagging,
 }
 

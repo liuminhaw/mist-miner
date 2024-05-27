@@ -16,9 +16,9 @@ import (
 )
 
 type corsProp struct {
-    client         *s3.Client
-    bucket         *types.Bucket
-    configurations *s3.GetBucketCorsOutput
+	client         *s3.Client
+	bucket         *types.Bucket
+	configurations *s3.GetBucketCorsOutput
 }
 
 func (cp *corsProp) fetchConf() error {
@@ -41,16 +41,16 @@ func (cp *corsProp) fetchConf() error {
 		return fmt.Errorf("fetchConf corsProp: %w", err)
 	}
 
-    cp.configurations = output
-    return nil
+	cp.configurations = output
+	return nil
 }
 
 func (cp *corsProp) generate() ([]shared.MinerProperty, error) {
 	var properties []shared.MinerProperty
 
-    if err := cp.fetchConf(); err != nil {
-        return nil, fmt.Errorf("generate corsProp: %w", err)
-    }
+	if err := cp.fetchConf(); err != nil {
+		return nil, fmt.Errorf("generate corsProp: %w", err)
+	}
 	for _, rule := range cp.configurations.CORSRules {
 		sortCorsRule(&rule)
 		buffer := new(bytes.Buffer)

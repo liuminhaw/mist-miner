@@ -36,19 +36,18 @@ type MinerResource struct {
 }
 
 func (m *MinerResource) Sort() {
-    sort.SliceStable(m.Properties, func(i, j int) bool {
-        if m.Properties[i].Type == m.Properties[j].Type {
-            if m.Properties[i].Label.Name == m.Properties[j].Label.Name {
-                return m.Properties[i].Content.Value < m.Properties[j].Content.Value
-            }
-            return m.Properties[i].Label.Name < m.Properties[j].Label.Name
-        }
-        return m.Properties[i].Type < m.Properties[j].Type
-    })
+	sort.SliceStable(m.Properties, func(i, j int) bool {
+		if m.Properties[i].Type == m.Properties[j].Type {
+			if m.Properties[i].Label.Name == m.Properties[j].Label.Name {
+				return m.Properties[i].Content.Value < m.Properties[j].Content.Value
+			}
+			return m.Properties[i].Label.Name < m.Properties[j].Label.Name
+		}
+		return m.Properties[i].Type < m.Properties[j].Type
+	})
 }
 
 type MinerResources []MinerResource
-
 
 // HCL config structure
 type HclConfig struct {
