@@ -10,7 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/hashicorp/go-plugin"
+	pb "github.com/liuminhaw/mist-miner/proto"
 	"github.com/liuminhaw/mist-miner/shared"
+
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var PLUG_NAME = "mm-s3"
@@ -20,7 +23,24 @@ type Miner struct {
 	resources shared.MinerResources
 }
 
-func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error) {
+func (m Miner) Mine(
+	mineConfig shared.MinerConfig,
+	formatter shared.PropFormatter,
+) (shared.MinerResources, error) {
+	myMessage := &pb.MinerProperty{
+		Type:    "test",
+		Label:   &pb.MinerPropertyLabel{},
+		Content: &pb.MinerPropertyContent{},
+	}
+	any, err := anypb.New(myMessage)
+	if err != nil {
+		return nil, fmt.Errorf("mine: creating anypb: %w", err)
+	}
+	_, err = formatter.Format(any)
+	if err != nil {
+		return nil, fmt.Errorf("mine: test calling formatter: %w", err)
+	}
+
 	// Quick test for config information
 	log.Printf("Config path: %s\n", mineConfig.Path)
 

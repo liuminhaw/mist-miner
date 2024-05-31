@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.20.0
 	github.com/spf13/cobra v1.8.0
 	google.golang.org/grpc v1.38.0
-	google.golang.org/protobuf v1.28.2-0.20230222093303-bc1253ad3743
+	google.golang.org/protobuf v1.34.1
 )
 
 require (
@@ -40,7 +40,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/golang/protobuf v1.5.0 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
