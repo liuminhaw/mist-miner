@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/md5"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -53,28 +51,25 @@ func (cp *corsProp) generate() ([]shared.MinerProperty, error) {
 	}
 	for _, rule := range cp.configurations.CORSRules {
 		sortCorsRule(&rule)
-		buffer := new(bytes.Buffer)
-		encoder := json.NewEncoder(buffer)
-		encoder.SetEscapeHTML(false)
-		if err := encoder.Encode(rule); err != nil {
-			return nil, fmt.Errorf("generate corsProp: marshal rule: %w", err)
-		}
 
-		corsValue := buffer.Bytes()
-		h := md5.New()
-		h.Write(corsValue)
-
-		properties = append(properties, shared.MinerProperty{
+		property := shared.MinerProperty{
 			Type: cors,
 			Label: shared.MinerPropertyLabel{
-				Name:   fmt.Sprintf("%x", h.Sum(nil)),
 				Unique: false,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: "json",
-				Value:  string(corsValue),
+				Format: shared.FormatJson,
 			},
-		})
+		}
+		if err := property.FormatContentValue(rule); err != nil {
+			return nil, fmt.Errorf("generate corsProp: %w", err)
+		}
+
+		h := md5.New()
+		h.Write([]byte(property.Content.Value))
+		property.Label.Name = fmt.Sprintf("%x", h.Sum(nil))
+
+		properties = append(properties, property)
 	}
 
 	return properties, nil

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -37,25 +35,21 @@ func (ep *encryptionProp) generate() ([]shared.MinerProperty, error) {
 	}
 
 	for _, rule := range ep.configurations.ServerSideEncryptionConfiguration.Rules {
-		buffer := new(bytes.Buffer)
-		encoder := json.NewEncoder(buffer)
-		encoder.SetEscapeHTML(false)
-		if err := encoder.Encode(rule); err != nil {
-			return nil, fmt.Errorf("generate encryptionProp: marshal rule: %w", err)
-		}
-		ruleValue := buffer.Bytes()
-
-		properties = append(properties, shared.MinerProperty{
+		property := shared.MinerProperty{
 			Type: encryption,
 			Label: shared.MinerPropertyLabel{
 				Name:   "Rule",
 				Unique: false,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: formatJson,
-				Value:  string(ruleValue),
+				Format: shared.FormatJson,
 			},
-		})
+		}
+		if err := property.FormatContentValue(rule); err != nil {
+			return nil, fmt.Errorf("generate encryptionProp: %w", err)
+		}
+
+		properties = append(properties, property)
 	}
 
 	return properties, nil

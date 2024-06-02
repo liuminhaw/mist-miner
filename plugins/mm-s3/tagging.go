@@ -49,17 +49,21 @@ func (t *taggingProp) generate() ([]shared.MinerProperty, error) {
 		return nil, fmt.Errorf("generate taggingProp: %w", err)
 	}
 	for _, tag := range t.configurations.TagSet {
-		properties = append(properties, shared.MinerProperty{
+		property := shared.MinerProperty{
 			Type: tagging,
 			Label: shared.MinerPropertyLabel{
 				Name:   *tag.Key,
 				Unique: true,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: formatText,
-				Value:  *tag.Value,
+				Format: shared.FormatText,
 			},
-		})
+		}
+		if err := property.FormatContentValue(*tag.Value); err != nil {
+			return nil, fmt.Errorf("generate taggingProp: %w", err)
+		}
+
+		properties = append(properties, property)
 	}
 
 	return properties, nil

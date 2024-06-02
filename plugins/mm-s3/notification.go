@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -43,25 +41,21 @@ func (np *notificationProp) generate() ([]shared.MinerProperty, error) {
 	if np.notificationIsEmpty() {
 		log.Println("No notification configuration found")
 	} else {
-		buffer := new(bytes.Buffer)
-		encoder := json.NewEncoder(buffer)
-		encoder.SetEscapeHTML(false)
-		if err := encoder.Encode(np.configurations); err != nil {
-			return nil, fmt.Errorf("generate notificationProp: marshal notification: %w", err)
-		}
-		notificationValue := buffer.Bytes()
-
-		properties = append(properties, shared.MinerProperty{
+		property := shared.MinerProperty{
 			Type: notification,
 			Label: shared.MinerPropertyLabel{
 				Name:   "Notification",
 				Unique: true,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: formatJson,
-				Value:  string(notificationValue),
+				Format: shared.FormatJson,
 			},
-		})
+		}
+        if err := property.FormatContentValue(np.configurations); err != nil {
+            return nil, fmt.Errorf("generate notificationProp: %w", err)
+        }
+
+		properties = append(properties, property)
 	}
 
 	return properties, nil

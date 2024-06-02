@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -44,25 +42,21 @@ func (ip *inventoryProp) generate() ([]shared.MinerProperty, error) {
 		}
 
 		for _, config := range ip.configurations.InventoryConfigurationList {
-			buffer := new(bytes.Buffer)
-			encoder := json.NewEncoder(buffer)
-			encoder.SetEscapeHTML(false)
-			if err := encoder.Encode(config); err != nil {
-				return nil, fmt.Errorf("generate inventory: marshal config: %w", err)
-			}
-			configValue := buffer.Bytes()
-
-			properties = append(properties, shared.MinerProperty{
+			property := shared.MinerProperty{
 				Type: inventory,
 				Label: shared.MinerPropertyLabel{
 					Name:   *config.Id,
 					Unique: true,
 				},
 				Content: shared.MinerPropertyContent{
-					Format: formatJson,
-					Value:  string(configValue),
+					Format: shared.FormatJson,
 				},
-			})
+			}
+			if err := property.FormatContentValue(config); err != nil {
+				return nil, fmt.Errorf("generate inventory: %w", err)
+			}
+
+			properties = append(properties, property)
 		}
 
 		if *ip.configurations.IsTruncated {

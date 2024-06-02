@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -39,37 +37,37 @@ func (aclP *aclProp) generate() ([]shared.MinerProperty, error) {
 		return nil, fmt.Errorf("generate aclProp: %w", err)
 	}
 
-	properties = append(properties, shared.MinerProperty{
+	property := shared.MinerProperty{
 		Type: acl,
 		Label: shared.MinerPropertyLabel{
 			Name:   "Owner",
 			Unique: true,
 		},
 		Content: shared.MinerPropertyContent{
-			Format: formatText,
-			Value:  *aclP.configurations.Owner.ID,
+			Format: shared.FormatText,
 		},
-	})
-	for _, grant := range aclP.configurations.Grants {
-		buffer := new(bytes.Buffer)
-		encoder := json.NewEncoder(buffer)
-		encoder.SetEscapeHTML(false)
-		if err := encoder.Encode(grant); err != nil {
-			return nil, fmt.Errorf("generate aclProp: marshal grant: %w", err)
-		}
-		grantValue := buffer.Bytes()
+	}
+	if err := property.FormatContentValue(*aclP.configurations.Owner.ID); err != nil {
+		return nil, fmt.Errorf("generate aclProp: %w", err)
+	}
+    properties = append(properties, property)
 
-		properties = append(properties, shared.MinerProperty{
+	for _, grant := range aclP.configurations.Grants {
+		property := shared.MinerProperty{
 			Type: acl,
 			Label: shared.MinerPropertyLabel{
 				Name:   "Grantee",
 				Unique: false,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: formatJson,
-				Value:  string(grantValue),
+				Format: shared.FormatJson,
 			},
-		})
+		}
+		if err := property.FormatContentValue(grant); err != nil {
+			return nil, fmt.Errorf("generate aclProp: %w", err)
+		}
+
+		properties = append(properties, property)
 	}
 
 	return properties, nil

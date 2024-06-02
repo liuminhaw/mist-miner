@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -28,6 +30,26 @@ type MinerProperty struct {
 	Type    string
 	Label   MinerPropertyLabel
 	Content MinerPropertyContent
+}
+
+// FormatContentValue set input data to desired property content value based on the content format.
+func (m *MinerProperty) FormatContentValue(data any) error {
+	switch m.Content.Format {
+	case FormatJson:
+		buffer := new(bytes.Buffer)
+		encoder := json.NewEncoder(buffer)
+		encoder.SetEscapeHTML(false)
+		if err := encoder.Encode(data); err != nil {
+			return fmt.Errorf("MinerProperty format: json marshal: %w", err)
+		}
+		m.Content.Value = buffer.String()
+	case FormatText:
+		m.Content.Value = fmt.Sprintf("%s", data)
+	default:
+		return fmt.Errorf("MinerProperty format: unknown format: %s", m.Content.Format)
+	}
+
+	return nil
 }
 
 type MinerResource struct {
@@ -98,3 +120,4 @@ func ReadConfig(path string) (*HclConfig, error) {
 
 	return &config, nil
 }
+

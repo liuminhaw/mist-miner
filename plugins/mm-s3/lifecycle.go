@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -50,28 +48,21 @@ func (l *lifecycleProp) generate() ([]shared.MinerProperty, error) {
 		return nil, fmt.Errorf("generate lifecycleProp: %w", err)
 	}
 	for _, rule := range l.configurations.Rules {
-		buffer := new(bytes.Buffer)
-		encoder := json.NewEncoder(buffer)
-		encoder.SetEscapeHTML(false)
-		if err := encoder.Encode(rule); err != nil {
-			return nil, fmt.Errorf(
-				"generate lifecycleProp: marshal rule: %w",
-				err,
-			)
-		}
-		ruleValue := buffer.Bytes()
-
-		properties = append(properties, shared.MinerProperty{
+		property := shared.MinerProperty{
 			Type: lifecycle,
 			Label: shared.MinerPropertyLabel{
 				Name:   *rule.ID,
 				Unique: true,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: formatJson,
-				Value:  string(ruleValue),
+				Format: shared.FormatJson,
 			},
-		})
+		}
+		if err := property.FormatContentValue(rule); err != nil {
+			return nil, fmt.Errorf("generate lifecycleProp: %w", err)
+		}
+
+		properties = append(properties, property)
 	}
 
 	return properties, nil

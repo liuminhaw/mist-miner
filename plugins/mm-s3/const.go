@@ -18,9 +18,6 @@ const (
 
 	noConfig       = "NoConfiguration"
 	valueSeparator = "|"
-
-	formatJson = "json"
-	formatText = "text"
 )
 
 var miningProperties = []string{

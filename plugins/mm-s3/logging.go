@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -40,25 +38,21 @@ func (lp *loggingProp) generate() ([]shared.MinerProperty, error) {
 	}
 
 	if lp.configurations.LoggingEnabled != nil {
-		buffer := new(bytes.Buffer)
-		encoder := json.NewEncoder(buffer)
-		encoder.SetEscapeHTML(false)
-		if err := encoder.Encode(lp.configurations.LoggingEnabled); err != nil {
-			return nil, fmt.Errorf("generate loggingProp: marshal logging: %w", err)
-		}
-		loggingValue := buffer.Bytes()
-
-		properties = append(properties, shared.MinerProperty{
+		property := shared.MinerProperty{
 			Type: logging,
 			Label: shared.MinerPropertyLabel{
 				Name:   "Logging",
 				Unique: true,
 			},
 			Content: shared.MinerPropertyContent{
-				Format: formatJson,
-				Value:  string(loggingValue),
+				Format: shared.FormatJson,
 			},
-		})
+		}
+		if err := property.FormatContentValue(lp.configurations.LoggingEnabled); err != nil {
+			return nil, fmt.Errorf("generate loggingProp: %w", err)
+		}
+
+		properties = append(properties, property)
 	}
 
 	return properties, nil

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -44,25 +42,21 @@ func (mp *metricsProp) generate() ([]shared.MinerProperty, error) {
 		}
 
 		for _, config := range mp.configurations.MetricsConfigurationList {
-			buffer := new(bytes.Buffer)
-			encoder := json.NewEncoder(buffer)
-			encoder.SetEscapeHTML(false)
-			if err := encoder.Encode(config); err != nil {
-				return nil, fmt.Errorf("generate metrics: marshal config: %w", err)
-			}
-			configValue := buffer.Bytes()
-
-			properties = append(properties, shared.MinerProperty{
+			property := shared.MinerProperty{
 				Type: metrics,
 				Label: shared.MinerPropertyLabel{
 					Name:   *config.Id,
 					Unique: true,
 				},
 				Content: shared.MinerPropertyContent{
-					Format: formatJson,
-					Value:  string(configValue),
+					Format: shared.FormatJson,
 				},
-			})
+			}
+			if err := property.FormatContentValue(config); err != nil {
+				return nil, fmt.Errorf("generate metrics: %w", err)
+			}
+
+			properties = append(properties, property)
 		}
 
 		if *mp.configurations.IsTruncated {

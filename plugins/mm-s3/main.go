@@ -70,7 +70,7 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 					Unique: true,
 				},
 				Content: shared.MinerPropertyContent{
-					Format: formatText,
+					Format: shared.FormatText,
 					Value:  bucketRegion,
 				},
 			})
