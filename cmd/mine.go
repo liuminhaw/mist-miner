@@ -5,6 +5,8 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"os/exec"
 
@@ -13,7 +15,6 @@ import (
 	"github.com/liuminhaw/mist-miner/shared"
 	"github.com/liuminhaw/mist-miner/shelf"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // mineCmd represents the mine command
@@ -24,7 +25,7 @@ var mineCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Set logger
 		// Don't want to see the plugin logs.
-		// log.SetOutput(io.Discard)
+		log.SetOutput(io.Discard)
 		logger := hclog.New(&hclog.LoggerOptions{
 			Level:      hclog.Debug,
 			Output:     os.Stderr,
@@ -144,7 +145,7 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	// We should have a Greeter now
 	miner := raw.(shared.Miner)
 
-	resources, err := miner.Mine(shared.MinerConfig{Path: configFile}, propFormatter{})
+	resources, err := miner.Mine(shared.MinerConfig{Path: configFile})
 	if err != nil {
 		return err
 	}
@@ -211,17 +212,4 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	// fmt.Printf("Resources: %s\n", string(b))
 
 	return nil
-}
-
-type propFormatter struct{}
-
-func (p propFormatter) Format(a *anypb.Any) (shared.MinerProperty, error) {
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level:      hclog.Debug,
-		Output:     os.Stderr,
-		JSONFormat: true,
-	})
-	logger.Debug("Prop Formatter called")
-
-	return shared.MinerProperty{}, nil
 }

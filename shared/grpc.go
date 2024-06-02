@@ -4,38 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
 	"github.com/liuminhaw/mist-miner/proto"
-	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // GRPCClient is an implementation of Greeter that talks over RPC
 type GRPCClient struct {
 	// client proto.GreetServiceClient
-	broker *plugin.GRPCBroker
 	client proto.MinerServiceClient
 }
 
-func (m *GRPCClient) Mine(config MinerConfig, pf PropFormatter) (MinerResources, error) {
-	addHelperServer := &GRPCAddHelperServer{Impl: pf}
-
-	var s *grpc.Server
-	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
-		s = grpc.NewServer(opts...)
-		proto.RegisterPropFormatterServer(s, addHelperServer)
-
-		return s
-	}
-
-	brokerID := m.broker.NextId()
-	go m.broker.AcceptAndServe(brokerID, serverFunc)
-
-	resources, err := m.client.Mine(context.Background(), &proto.MinerConfig{
-		AddServer: brokerID,
-		Path:      config.Path,
-	})
+func (m *GRPCClient) Mine(config MinerConfig) (MinerResources, error) {
+	fmt.Printf("GRPCClient Mine: %+v\n", config)
+	resources, err := m.client.Mine(context.Background(), &proto.MinerConfig{Path: config.Path})
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +43,6 @@ func (m *GRPCClient) Mine(config MinerConfig, pf PropFormatter) (MinerResources,
 		minerResources = append(minerResources, minerResource)
 	}
 
-	s.Stop()
-
 	return minerResources, nil
 }
 
@@ -72,29 +50,17 @@ func (m *GRPCClient) Mine(config MinerConfig, pf PropFormatter) (MinerResources,
 type GRPCServer struct {
 	// This is the real implementation
 	// Impl Greeter
-	Impl   Miner
-	broker *plugin.GRPCBroker
+	Impl Miner
 }
 
 func (m *GRPCServer) Mine(
 	ctx context.Context,
 	req *proto.MinerConfig,
 ) (*proto.MinerResources, error) {
-	fmt.Println("GRPCServer Mine run")
-	conn, err := m.broker.Dial(req.AddServer)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	formatter := &GRPCAddHelperClient{proto.NewPropFormatterClient(conn)}
-
 	// func (m *GRPCServer) Mine(ctx context.Context, req *proto.NoParam) (*proto.MinerResources, error) {
 	protoResources := []*proto.MinerResource{}
 
-	resources, err := m.Impl.Mine(MinerConfig{Path: req.Path}, formatter)
-	if err != nil {
-		return nil, err
-	}
+	resources, err := m.Impl.Mine(MinerConfig{Path: req.Path})
 	fmt.Printf("Resources: %+v\n", resources)
 	for _, resource := range resources {
 		protoResource := proto.MinerResource{
@@ -119,56 +85,5 @@ func (m *GRPCServer) Mine(
 
 	return &proto.MinerResources{
 		Resources: protoResources,
-	}, nil
-}
-
-// GRPCAddHelperClient is the client API for GRPCAddHelper service
-type GRPCAddHelperClient struct{ client proto.PropFormatterClient }
-
-func (m *GRPCAddHelperClient) Format(a *anypb.Any) (MinerProperty, error) {
-	resp, err := m.client.Format(context.Background(), a)
-	if err != nil {
-		hclog.Default().Info("add.Format", "client", "start", "err", err)
-		return MinerProperty{}, err
-	}
-
-	return MinerProperty{
-		Type: resp.Type,
-		Label: MinerPropertyLabel{
-			Name:   resp.Label.Name,
-			Unique: resp.Label.Unique,
-		},
-		Content: MinerPropertyContent{
-			Format: resp.Content.Format,
-			Value:  resp.Content.Value,
-		},
-	}, nil
-}
-
-// GRPCAddHelperServer is the server that GRPCClient talks to
-type GRPCAddHelperServer struct {
-	// This is the real implementation
-	Impl PropFormatter
-}
-
-func (m *GRPCAddHelperServer) Format(
-	ctx context.Context,
-	in *anypb.Any,
-) (*proto.MinerProperty, error) {
-	property, err := m.Impl.Format(in)
-	if err != nil {
-		return nil, err
-	}
-
-	return &proto.MinerProperty{
-		Type: property.Type,
-		Label: &proto.MinerPropertyLabel{
-			Name:   property.Label.Name,
-			Unique: property.Label.Unique,
-		},
-		Content: &proto.MinerPropertyContent{
-			Format: property.Content.Format,
-			Value:  property.Content.Value,
-		},
-	}, nil
+	}, err
 }

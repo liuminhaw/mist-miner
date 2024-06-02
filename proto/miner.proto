@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-import "google/protobuf/any.proto";
-
 option go_package = "./proto";
 
 package proto;
@@ -10,15 +8,10 @@ service MinerService {
     rpc Mine(MinerConfig) returns (MinerResources);
 }
 
-service PropFormatter {
-    rpc Format(google.protobuf.Any) returns (MinerProperty);
-}
-
 message NoParam{};
 
 message MinerConfig{
-    uint32 add_server = 1;
-    string path = 2;
+    string path = 1;
 }
 
 message MinerPropertyLabel{
