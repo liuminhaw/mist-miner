@@ -4,6 +4,7 @@ import "fmt"
 
 const (
 	accelerateConfig   = "AccelerateConfig"
+	analyticsConfig    = "AnalyticsConfig"
 	acl                = "Acl"
 	cors               = "CORS"
 	encryption         = "Encryption"
@@ -14,6 +15,10 @@ const (
 	logging            = "Logging"
 	metrics            = "Metrics"
 	notification       = "Notification"
+	ownershipControl   = "OwnershipControl"
+	policy             = "Policy"
+	policyStatus       = "PolicyStatus"
+	replication        = "Replication"
 	tagging            = "Tag"
 
 	noConfig       = "NoConfiguration"
@@ -22,6 +27,7 @@ const (
 
 var miningProperties = []string{
 	accelerateConfig,
+	analyticsConfig,
 	acl,
 	cors,
 	encryption,
@@ -31,6 +37,10 @@ var miningProperties = []string{
 	logging,
 	metrics,
 	notification,
+	ownershipControl,
+	policy,
+	policyStatus,
+	replication,
 	tagging,
 }
 

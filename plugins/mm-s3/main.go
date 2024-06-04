@@ -47,10 +47,13 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 		}
 
 		for _, bucket := range bucketsOutput.Buckets {
+			log.Printf("Bucket: %s\n", *bucket.Name)
+
 			bucketResource := shared.MinerResource{}
 
 			bucketRegion, err := getBucketRegion(client, *bucket.Name)
 			if err != nil {
+				log.Printf("Failed to get bucket region: %v", err)
 				continue
 			}
 

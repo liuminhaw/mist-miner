@@ -42,7 +42,12 @@ func (m *MinerProperty) FormatContentValue(data any) error {
 		if err := encoder.Encode(data); err != nil {
 			return fmt.Errorf("MinerProperty format: json marshal: %w", err)
 		}
-		m.Content.Value = buffer.String()
+
+		normalizedJson, err := JsonNormalize(buffer.String())
+		if err != nil {
+			return fmt.Errorf("MinerProperty format: %w", err)
+		}
+		m.Content.Value = string(normalizedJson)
 	case FormatText:
 		m.Content.Value = fmt.Sprintf("%s", data)
 	default:
@@ -120,4 +125,3 @@ func ReadConfig(path string) (*HclConfig, error) {
 
 	return &config, nil
 }
-

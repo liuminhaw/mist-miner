@@ -1,6 +1,6 @@
 package shared
 
 const (
-    FormatJson = "json"
-    FormatText = "text"
+	FormatJson = "json"
+	FormatText = "text"
 )

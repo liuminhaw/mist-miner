@@ -22,6 +22,12 @@ var propConstructors = map[string]propConstructor{
 			bucket: bucket,
 		}
 	},
+	analyticsConfig: func(client *s3.Client, bucket *types.Bucket) crawler {
+		return &analyticsProp{
+			client: client,
+			bucket: bucket,
+		}
+	},
 	acl: func(client *s3.Client, bucket *types.Bucket) crawler {
 		return &aclProp{
 			client: client,
@@ -72,6 +78,30 @@ var propConstructors = map[string]propConstructor{
 	},
 	notification: func(client *s3.Client, bucket *types.Bucket) crawler {
 		return &notificationProp{
+			client: client,
+			bucket: bucket,
+		}
+	},
+	ownershipControl: func(client *s3.Client, bucket *types.Bucket) crawler {
+		return &ownershipControlProp{
+			client: client,
+			bucket: bucket,
+		}
+	},
+	policy: func(client *s3.Client, bucket *types.Bucket) crawler {
+		return &policyProp{
+			client: client,
+			bucket: bucket,
+		}
+	},
+	policyStatus: func(client *s3.Client, bucket *types.Bucket) crawler {
+		return &policyStatusProp{
+			client: client,
+			bucket: bucket,
+		}
+	},
+	replication: func(client *s3.Client, bucket *types.Bucket) crawler {
+		return &replicationProp{
 			client: client,
 			bucket: bucket,
 		}

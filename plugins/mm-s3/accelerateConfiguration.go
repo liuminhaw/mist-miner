@@ -39,19 +39,19 @@ func (a *accelerateProp) generate() ([]shared.MinerProperty, error) {
 		return []shared.MinerProperty{}, &mmS3Error{accelerateConfig, noConfig}
 	}
 
-    property := shared.MinerProperty{
-        Type: accelerateConfig,
-        Label: shared.MinerPropertyLabel{
-            Name:   "Status",
-            Unique: true,
-        },
-        Content: shared.MinerPropertyContent{   
-            Format: shared.FormatText,
-        },
-    }
-    if err := property.FormatContentValue(a.configurations.Status); err != nil {
-        return nil, fmt.Errorf("generate accelerateProp: %w", err)
-    }
+	property := shared.MinerProperty{
+		Type: accelerateConfig,
+		Label: shared.MinerPropertyLabel{
+			Name:   "Status",
+			Unique: true,
+		},
+		Content: shared.MinerPropertyContent{
+			Format: shared.FormatText,
+		},
+	}
+	if err := property.FormatContentValue(a.configurations.Status); err != nil {
+		return nil, fmt.Errorf("generate accelerateProp: %w", err)
+	}
 
-    return []shared.MinerProperty{property}, nil
+	return []shared.MinerProperty{property}, nil
 }

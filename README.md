@@ -47,3 +47,11 @@ Use CLI to uncompress zlib file for viewing content
 ```bash
 zlib-flate -uncompress < input_file_path
 ```
+
+# Note
+
+## Plugins
+Plugins have the responsibility to return consistent data if there is no change on the resource. 
+The shared library provided a `JsonNormalize` helper function to normalize input json string
+by sorting the keys of each object. Also `MinerProperty` struct has `FormatContentValue` method
+that help to set data format in normalized json string or just normal string.

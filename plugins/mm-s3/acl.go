@@ -50,7 +50,7 @@ func (aclP *aclProp) generate() ([]shared.MinerProperty, error) {
 	if err := property.FormatContentValue(*aclP.configurations.Owner.ID); err != nil {
 		return nil, fmt.Errorf("generate aclProp: %w", err)
 	}
-    properties = append(properties, property)
+	properties = append(properties, property)
 
 	for _, grant := range aclP.configurations.Grants {
 		property := shared.MinerProperty{

@@ -26,19 +26,19 @@ func jsonEqual(json1, json2 string) (bool, error) {
 	normalizedObj1 := normalize(obj1)
 	normalizedObj2 := normalize(obj2)
 
-    fmt.Printf("normalizedObj1: %+v\n", normalizedObj1)
-    fmt.Printf("normalizedObj2: %+v\n", normalizedObj2)
+	fmt.Printf("normalizedObj1: %+v\n", normalizedObj1)
+	fmt.Printf("normalizedObj2: %+v\n", normalizedObj2)
 
-    normalizedJson1, err := json.Marshal(normalizedObj1)
-    if err != nil {
-        return false, err
-    }
-    normalizedJson2, err := json.Marshal(normalizedObj2)
-    if err != nil {
-        return false, err
-    }
-    fmt.Printf("normalizedJson1: %s\n", normalizedJson1)
-    fmt.Printf("normalizedJson2: %s\n", normalizedJson2)
+	normalizedJson1, err := json.Marshal(normalizedObj1)
+	if err != nil {
+		return false, err
+	}
+	normalizedJson2, err := json.Marshal(normalizedObj2)
+	if err != nil {
+		return false, err
+	}
+	fmt.Printf("normalizedJson1: %s\n", normalizedJson1)
+	fmt.Printf("normalizedJson2: %s\n", normalizedJson2)
 
 	// Using reflect.DeepEqual to compare the normalized objects
 	return reflect.DeepEqual(normalizedObj1, normalizedObj2), nil

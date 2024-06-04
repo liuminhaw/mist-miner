@@ -56,9 +56,9 @@ func (it *intelligentTieringProp) generate() ([]shared.MinerProperty, error) {
 					Format: shared.FormatJson,
 				},
 			}
-            if err := property.FormatContentValue(config); err != nil {
-                return nil, fmt.Errorf("generate intelligentTiering: %w", err)
-            }
+			if err := property.FormatContentValue(config); err != nil {
+				return nil, fmt.Errorf("generate intelligentTiering: %w", err)
+			}
 			properties = append(properties, property)
 		}
 

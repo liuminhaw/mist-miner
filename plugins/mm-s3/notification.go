@@ -51,9 +51,9 @@ func (np *notificationProp) generate() ([]shared.MinerProperty, error) {
 				Format: shared.FormatJson,
 			},
 		}
-        if err := property.FormatContentValue(np.configurations); err != nil {
-            return nil, fmt.Errorf("generate notificationProp: %w", err)
-        }
+		if err := property.FormatContentValue(np.configurations); err != nil {
+			return nil, fmt.Errorf("generate notificationProp: %w", err)
+		}
 
 		properties = append(properties, property)
 	}
