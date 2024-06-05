@@ -106,8 +106,26 @@ var propConstructors = map[string]propConstructor{
 			bucket: bucket,
 		}
 	},
+	requestPayment: func(client *s3.Client, bucket *types.Bucket) crawler {
+		return &requestPaymentProp{
+			client: client,
+			bucket: bucket,
+		}
+	},
 	tagging: func(client *s3.Client, bucket *types.Bucket) crawler {
 		return &taggingProp{
+			client: client,
+			bucket: bucket,
+		}
+	},
+	versioning: func(client *s3.Client, bucket *types.Bucket) crawler {
+		return &versioningProp{
+			client: client,
+			bucket: bucket,
+		}
+	},
+	website: func(client *s3.Client, bucket *types.Bucket) crawler {
+		return &websiteProp{
 			client: client,
 			bucket: bucket,
 		}

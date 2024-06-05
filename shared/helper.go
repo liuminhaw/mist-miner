@@ -8,7 +8,7 @@ import (
 
 // JsonNormalize normalizes a JSON string by sorting the keys of each object in the JSON string.
 func JsonNormalize(jsonStr string) ([]byte, error) {
-    // fmt.Printf("JsonNormalize: %s\n", jsonStr)
+	// fmt.Printf("JsonNormalize: %s\n", jsonStr)
 
 	var jsonObj interface{}
 	if err := json.Unmarshal([]byte(jsonStr), &jsonObj); err != nil {
@@ -37,12 +37,12 @@ func normalize(data interface{}) interface{} {
 			return fmt.Sprintf("%v", v[i]) < fmt.Sprintf("%v", v[j])
 		})
 		return v
-    case map[string]interface{}:
+	case map[string]interface{}:
 		// Recursively normalize each value in the map
-        for key, value := range v {
-            v[key] = normalize(value)
-        }
+		for key, value := range v {
+			v[key] = normalize(value)
+		}
 	}
 
-    return data
+	return data
 }

@@ -19,7 +19,10 @@ const (
 	policy             = "Policy"
 	policyStatus       = "PolicyStatus"
 	replication        = "Replication"
+	requestPayment     = "RequestPayment"
 	tagging            = "Tag"
+	versioning         = "Versioning"
+	website            = "Website"
 
 	noConfig       = "NoConfiguration"
 	valueSeparator = "|"
@@ -41,7 +44,10 @@ var miningProperties = []string{
 	policy,
 	policyStatus,
 	replication,
+	requestPayment,
 	tagging,
+	versioning,
+	website,
 }
 
 type mmS3Error struct {
