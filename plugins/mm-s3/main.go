@@ -121,12 +121,17 @@ func main() {
 
 // getBucketRegion returns the region of the bucket
 func getBucketRegion(client *s3.Client, bucket string) (string, error) {
-	result, err := client.HeadBucket(context.Background(), &s3.HeadBucketInput{
+	result, err := client.GetBucketLocation(context.Background(), &s3.GetBucketLocationInput{
 		Bucket: &bucket,
 	})
 	if err != nil {
 		return "", fmt.Errorf("getBucketRegion: %w", err)
 	}
 
-	return *result.BucketRegion, nil
+	region := string(result.LocationConstraint)
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	return region, nil
 }
