@@ -15,7 +15,7 @@ type GRPCClient struct {
 
 func (m *GRPCClient) Mine(config MinerConfig) (MinerResources, error) {
 	fmt.Printf("GRPCClient Mine: %+v\n", config)
-	resources, err := m.client.Mine(context.Background(), &proto.MinerConfig{Path: config.Path})
+	resources, err := m.client.Mine(context.Background(), toProtoMinerConfig(config))
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +46,22 @@ func (m *GRPCClient) Mine(config MinerConfig) (MinerResources, error) {
 	return minerResources, nil
 }
 
+func toProtoMinerConfig(config MinerConfig) *proto.MinerConfig {
+    equipments := []*proto.MinerConfigEquipment{}
+    for _, equipment := range config.Equipments {
+        equipments = append(equipments, &proto.MinerConfigEquipment{
+            Type: equipment.Type,
+            Name: equipment.Name,
+            Attributes: equipment.Attributes,
+        })
+    }
+
+    return &proto.MinerConfig{
+        Auth: config.Auth,
+        Equipments: equipments,
+    }
+}
+
 // GRPCServer is the server that GRPCClient talks to
 type GRPCServer struct {
 	// This is the real implementation
@@ -60,7 +76,7 @@ func (m *GRPCServer) Mine(
 	// func (m *GRPCServer) Mine(ctx context.Context, req *proto.NoParam) (*proto.MinerResources, error) {
 	protoResources := []*proto.MinerResource{}
 
-	resources, err := m.Impl.Mine(MinerConfig{Path: req.Path})
+	resources, err := m.Impl.Mine(toSharedMinerConfig(req))
 	fmt.Printf("Resources: %+v\n", resources)
 	for _, resource := range resources {
 		protoResource := proto.MinerResource{
@@ -86,4 +102,20 @@ func (m *GRPCServer) Mine(
 	return &proto.MinerResources{
 		Resources: protoResources,
 	}, err
+}
+
+func toSharedMinerConfig(config *proto.MinerConfig) MinerConfig {
+    equipments := []MinerConfigEquipment{}
+    for _, equipment := range config.Equipments {
+        equipments = append(equipments, MinerConfigEquipment{
+            Type: equipment.Type,
+            Name: equipment.Name,
+            Attributes: equipment.Attributes,
+        })
+    }
+
+    return MinerConfig{
+        Auth: config.Auth,
+        Equipments: equipments,
+    }
 }

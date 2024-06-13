@@ -45,7 +45,11 @@ var mineCmd = &cobra.Command{
 			fmt.Printf("Plug Name: %s\n", plug.Name)
 			fmt.Printf("Plug Group: %s\n", plug.Group)
 
-			err := run(pluginModule{name: plug.Name, group: plug.Group}, &gLabels, logger)
+			err := run(
+				pluginModule{name: plug.Name, group: plug.Group, config: plug.GenMinerConfig()},
+				&gLabels,
+				logger,
+			)
 			if err != nil {
 				fmt.Printf("Error running plugin: %+v\n", err)
 				os.Exit(1)
@@ -99,8 +103,9 @@ func init() {
 }
 
 type pluginModule struct {
-	name  string
-	group string
+	name   string
+	group  string
+	config shared.MinerConfig
 }
 
 type groupLabels map[string][]shelf.LabelMark
@@ -145,7 +150,7 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	// We should have a Greeter now
 	miner := raw.(shared.Miner)
 
-	resources, err := miner.Mine(shared.MinerConfig{Path: configFile})
+	resources, err := miner.Mine(pMod.config)
 	if err != nil {
 		return err
 	}

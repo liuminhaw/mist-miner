@@ -7,13 +7,19 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclparse"
 )
 
+type MinerConfigEquipment struct {
+    Type string
+    Name string
+    Attributes map[string]string
+}
+
 type MinerConfig struct {
-	Path string
+    Auth map[string]string
+    Equipments []MinerConfigEquipment
 }
 
 type MinerPropertyLabel struct {
@@ -82,18 +88,40 @@ type HclConfig struct {
 }
 
 type Plug struct {
-	Name       string     `hcl:"name,label"`
-	Group      string     `hcl:"group,label"`
-	Profile    string     `hcl:"profile"`
-	Properties []Property `hcl:"property,block"`
+	Name          string            `hcl:"name,label"`
+	Group         string            `hcl:"group,label"`
+	Authenticator map[string]string `hcl:"authenticator,attr"`
+	Diaries       []PlugDiary       `hcl:"diary,block"`
+	Equipments    []PlugEquipment   `hcl:"equipment,block"`
 }
 
-type Property struct {
-	Type     string   `hcl:"type,label"`
-	Name     string   `hcl:"name,label"`
-	Compare  bool     `hcl:"compare"`
-	Required bool     `hcl:"required"`
-	Remain   hcl.Body `hcl:",remain"`
+func (p Plug) GenMinerConfig() MinerConfig {
+    equipments := []MinerConfigEquipment{}
+    for _, equipment := range p.Equipments {
+        equipments = append(equipments, MinerConfigEquipment{
+            Type: equipment.Type,
+            Name: equipment.Name,
+            Attributes: equipment.Attributes,
+        })
+    }
+
+    return MinerConfig{
+        Auth: p.Authenticator,
+        Equipments: equipments,
+    }
+}
+
+type PlugEquipment struct {
+	Type       string            `hcl:"type,label"`
+	Name       string            `hcl:"name,label"`
+	Attributes map[string]string `hcl:"attributes,attr"`
+}
+
+type PlugDiary struct {
+	Type     string `hcl:"type,label"`
+	Name     string `hcl:"name,label"`
+	Compare  bool   `hcl:"compare,optional"`
+	Required bool   `hcl:"required,optional"`
 }
 
 // ReadConfig reads the HCL config file and returns the parsed structure.
@@ -125,3 +153,4 @@ func ReadConfig(path string) (*HclConfig, error) {
 
 	return &config, nil
 }
+
