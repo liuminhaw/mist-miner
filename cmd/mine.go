@@ -180,6 +180,12 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 		}
 	}
 
+	// Prevent from writing empty label map
+	if len(labelMap.Maps) == 0 {
+		fmt.Printf("No resources found in group %s with plugin %s\n", pMod.group, pMod.name)
+		return nil
+	}
+
 	labelMap.Sort()
 	if err := labelMap.Write(); err != nil {
 		return err
