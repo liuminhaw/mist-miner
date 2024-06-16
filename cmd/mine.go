@@ -56,19 +56,17 @@ var mineCmd = &cobra.Command{
 			}
 		}
 
-		for group, labels := range gLabels {
+		for group, label := range gLabels {
 			fmt.Printf("Group: %s\n", group)
-			for _, label := range labels {
-				if err := label.Update(); err != nil {
-					fmt.Printf("Error updating label mark: %+v\n", err)
-					os.Exit(1)
-				}
+			if err := label.Update(); err != nil {
+				fmt.Printf("Error updating label mark: %+v\n", err)
+				os.Exit(1)
+			}
 
-				fmt.Printf("Hash: %s\n", label.Hash)
-				fmt.Printf("Parent: %s\n", label.Parent)
-				for _, mapping := range label.Mappings {
-					fmt.Printf("Module: %s, Hash: %s\n", mapping.Module, mapping.Hash)
-				}
+			fmt.Printf("Hash: %s\n", label.Hash)
+			fmt.Printf("Parent: %s\n", label.Parent)
+			for _, mapping := range label.Mappings {
+				fmt.Printf("Module: %s, Hash: %s\n", mapping.Module, mapping.Hash)
 			}
 		}
 
@@ -108,7 +106,7 @@ type pluginModule struct {
 	config shared.MinerConfig
 }
 
-type groupLabels map[string][]shelf.LabelMark
+type groupLabels map[string]shelf.LabelMark
 
 func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	// Setup logger
@@ -194,18 +192,21 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	// Check if label mark with plugId (group) exists
 	// If not exists, create a new label mark and update
 	// If exists, update the existence label mark
+	var labelMark *shelf.LabelMark
 	if _, ok := (*gLabel)[pMod.group]; !ok {
-		(*gLabel)[pMod.group] = []shelf.LabelMark{}
-	}
-
-	labelMark, err := shelf.NewMark(pMod.name, pMod.group, labelMap.Hash)
-	if err != nil {
-		return err
+		(*gLabel)[pMod.group] = shelf.LabelMark{}
+		labelMark, err = shelf.NewMark(pMod.name, pMod.group, labelMap.Hash)
+		if err != nil {
+			return err
+		}
+	} else {
+		lm := (*gLabel)[pMod.group]
+		labelMark = &lm
 	}
 
 	// Update labelMark to the groupLabels
 	labelMark.AddMapping(pMod.name, labelMap.Hash)
-	(*gLabel)[pMod.group] = append((*gLabel)[pMod.group], *labelMark)
+	(*gLabel)[pMod.group] = *labelMark
 
 	// err = labelMark.Update()
 	// if err != nil {
