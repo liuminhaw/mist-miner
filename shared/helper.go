@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -23,6 +24,18 @@ func JsonNormalize(jsonStr string) ([]byte, error) {
 	}
 
 	return normalizedJson, nil
+}
+
+// JsonMarshal marshals a JSON object to a byte slice.
+func JsonMarshal(data any) ([]byte, error) {
+	buffer := new(bytes.Buffer)
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(data); err != nil {
+		return nil, fmt.Errorf("JsonMarshal: %w", err)
+	}
+
+	return buffer.Bytes(), nil
 }
 
 // normalize recursively normalizes a JSON object by sorting the keys of each object.

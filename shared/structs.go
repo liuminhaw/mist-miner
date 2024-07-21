@@ -1,8 +1,6 @@
 package shared
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,14 +10,14 @@ import (
 )
 
 type MinerConfigEquipment struct {
-    Type string
-    Name string
-    Attributes map[string]string
+	Type       string
+	Name       string
+	Attributes map[string]string
 }
 
 type MinerConfig struct {
-    Auth map[string]string
-    Equipments []MinerConfigEquipment
+	Auth       map[string]string
+	Equipments []MinerConfigEquipment
 }
 
 type MinerPropertyLabel struct {
@@ -42,14 +40,12 @@ type MinerProperty struct {
 func (m *MinerProperty) FormatContentValue(data any) error {
 	switch m.Content.Format {
 	case FormatJson:
-		buffer := new(bytes.Buffer)
-		encoder := json.NewEncoder(buffer)
-		encoder.SetEscapeHTML(false)
-		if err := encoder.Encode(data); err != nil {
-			return fmt.Errorf("MinerProperty format: json marshal: %w", err)
+		marshaledData, err := JsonMarshal(data)
+		if err != nil {
+			return fmt.Errorf("MinerProperty format: %w", err)
 		}
 
-		normalizedJson, err := JsonNormalize(buffer.String())
+		normalizedJson, err := JsonNormalize(string(marshaledData))
 		if err != nil {
 			return fmt.Errorf("MinerProperty format: %w", err)
 		}
@@ -96,19 +92,19 @@ type Plug struct {
 }
 
 func (p Plug) GenMinerConfig() MinerConfig {
-    equipments := []MinerConfigEquipment{}
-    for _, equipment := range p.Equipments {
-        equipments = append(equipments, MinerConfigEquipment{
-            Type: equipment.Type,
-            Name: equipment.Name,
-            Attributes: equipment.Attributes,
-        })
-    }
+	equipments := []MinerConfigEquipment{}
+	for _, equipment := range p.Equipments {
+		equipments = append(equipments, MinerConfigEquipment{
+			Type:       equipment.Type,
+			Name:       equipment.Name,
+			Attributes: equipment.Attributes,
+		})
+	}
 
-    return MinerConfig{
-        Auth: p.Authenticator,
-        Equipments: equipments,
-    }
+	return MinerConfig{
+		Auth:       p.Authenticator,
+		Equipments: equipments,
+	}
 }
 
 type PlugEquipment struct {
@@ -153,4 +149,3 @@ func ReadConfig(path string) (*HclConfig, error) {
 
 	return &config, nil
 }
-
