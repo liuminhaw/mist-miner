@@ -22,7 +22,6 @@ go.work
 
 # mist-miner executable
 mist-miner
-plugins/bin/*
 
 # config file
 config.hcl
