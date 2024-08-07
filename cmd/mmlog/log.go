@@ -34,8 +34,10 @@ var LogCmd = &cobra.Command{
 		listModel.SetFilteringEnabled(true)
 
 		m := model{
-			list: listModel,
+			logList: listModel,
+			state:   logView,
 		}
+		m.logList.DisableQuitKeybindings()
 		if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
 			fmt.Println("Error running log command:", err)
 			os.Exit(1)
@@ -76,7 +78,7 @@ func initialModel(group string) (list.Model, error) {
 		if err != nil {
 			return list.Model{}, fmt.Errorf("initial model: read mark %w", err)
 		}
-		items = append(items, item{hash: mark.Hash, timestamp: mark.TimeStamp})
+		items = append(items, logItem{hash: mark.Hash, timestamp: mark.TimeStamp})
 
 		if mark.Parent == "nil" {
 			break
