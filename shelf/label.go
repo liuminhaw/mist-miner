@@ -27,6 +27,48 @@ type IdentifierHashMaps struct {
 	buffer bytes.Buffer
 }
 
+// ReadIdentifierHashMaps reads the identifier hash maps from the file (hash) using the given group and map hash
+// then convert the content to IdentifierHashMaps and return it.
+func ReadIdentifierHashMaps(group, hash string) (*IdentifierHashMaps, error) {
+	idHashMaps := IdentifierHashMaps{
+		Hash:  hash,
+		Group: group,
+		Maps:  []IdentifierHashMap{},
+	}
+	hashFile, err := ObjectFile(idHashMaps.Group, idHashMaps.Hash)
+	if err != nil {
+		return nil, fmt.Errorf("read identifier hash maps: %w", err)
+	}
+
+	f, err := os.Open(hashFile)
+	if err != nil {
+		return nil, fmt.Errorf("read identifier hash maps: open file: %w", err)
+	}
+	defer f.Close()
+
+	r, err := zlib.NewReader(f)
+	if err != nil {
+		return nil, fmt.Errorf("read identifier hash maps: create zlib reader: %w", err)
+	}
+	defer r.Close()
+
+	// Scan in hash identifier pairs
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			return nil, fmt.Errorf("read identifier hash maps: invalid mapping: %s", line)
+		}
+		idHashMaps.Maps = append(idHashMaps.Maps, IdentifierHashMap{
+			Hash:       fields[0],
+			Identifier: fields[1],
+		})
+	}
+
+	return &idHashMaps, nil
+}
+
 // Sort sorts the IdentifierHashMaps by the hash field.
 func (ihm *IdentifierHashMaps) Sort() {
 	slices.SortStableFunc(ihm.Maps, func(a, b IdentifierHashMap) int {

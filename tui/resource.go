@@ -1,0 +1,99 @@
+package tui
+
+import (
+	"fmt"
+
+	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/liuminhaw/mist-miner/shelf"
+)
+
+type resourceItem struct {
+	hash       string
+	identifier string
+}
+
+func (i resourceItem) Title() string { return i.identifier }
+func (i resourceItem) Description() string {
+	return fmt.Sprintf("hash: %s", i.hash)
+}
+
+func (i resourceItem) FilterValue() string {
+	return fmt.Sprintf("%s %s", i.hash, i.identifier)
+}
+
+type resourceModel struct {
+	group  string
+	hash   string
+	list   list.Model
+	width  int
+	height int
+
+	incomeHash string
+}
+
+func InitResourceModel(group, resourceHash, markHash string) (tea.Model, error) {
+	list, err := readResourceItems(group, resourceHash)
+	if err != nil {
+		return nil, fmt.Errorf("InitResourceModel(%s, %s): %w", group, resourceHash, err)
+	}
+
+	model := resourceModel{
+		hash:  resourceHash,
+		group: group,
+		list:  list,
+        incomeHash: markHash,
+	}
+	model.list.Title = fmt.Sprintf("Plugin: %s in group %s", resourceHash[:8], group)
+	model.list.SetStatusBarItemName("entry", "entries")
+	model.list.SetFilteringEnabled(true)
+	model.list.DisableQuitKeybindings()
+
+	return model, nil
+}
+
+func (m resourceModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m resourceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		tuiWindowSize = msg
+		h, v := docStyle.GetFrameSize()
+		m.list.SetSize(msg.Width-h, msg.Height-v)
+		return m, nil
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "ctrl+z":
+			markModel, _ := InitMarkModel(m.group, m.incomeHash)
+			return markModel.Update(tuiWindowSize)
+		}
+	case markReadMsg:
+		m.list.SetItems(msg.items)
+	}
+
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
+}
+
+func (m resourceModel) View() string {
+	return docStyle.Render(m.list.View())
+}
+
+func readResourceItems(group, hash string) (list.Model, error) {
+	idHashMaps, err := shelf.ReadIdentifierHashMaps(group, hash)
+	if err != nil {
+		return list.Model{}, fmt.Errorf("readResourceItems(%s, %s): %w", group, hash, err)
+	}
+
+	items := []list.Item{}
+	for _, m := range idHashMaps.Maps {
+		items = append(items, resourceItem{hash: m.Hash, identifier: m.Identifier})
+	}
+
+	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil
+}

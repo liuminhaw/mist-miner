@@ -9,17 +9,17 @@ import (
 )
 
 type markItem struct {
-	hash       string
-	identifier string
+	hash   string
+	plugin string
 }
 
-func (i markItem) Title() string       { return i.identifier }
+func (i markItem) Title() string { return i.plugin }
 func (i markItem) Description() string {
-    return fmt.Sprintf("hash: %s", i.hash)
+	return fmt.Sprintf("hash: %s", i.hash)
 }
 
 func (i markItem) FilterValue() string {
-	return fmt.Sprintf("%s %s", i.hash, i.identifier)
+	return fmt.Sprintf("%s %s", i.hash, i.plugin)
 }
 
 type markModel struct {
@@ -39,9 +39,9 @@ func InitMarkModel(group, markHash string) (tea.Model, error) {
 	model := markModel{
 		hash:  markHash,
 		group: group,
-		list: list,
+		list:  list,
 	}
-    model.list.Title = fmt.Sprintf("Mark: %s in group %s", markHash[:8], group)
+	model.list.Title = fmt.Sprintf("Mark: %s in group %s", markHash[:8], group)
 	model.list.SetStatusBarItemName("entry", "entries")
 	model.list.SetFilteringEnabled(true)
 	model.list.DisableQuitKeybindings()
@@ -56,7 +56,7 @@ func (m markModel) Init() tea.Cmd {
 func (m markModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-        tuiWindowSize = msg
+		tuiWindowSize = msg
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 		return m, nil
@@ -65,8 +65,12 @@ func (m markModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "ctrl+z":
-            logModel, _ := InitLogModel(m.group)
-            return logModel.Update(tuiWindowSize)
+			logModel, _ := InitLogModel(m.group)
+			return logModel.Update(tuiWindowSize)
+		case "enter":
+			selectedItem := m.list.SelectedItem().(markItem)
+			resource, _ := InitResourceModel(m.group, selectedItem.hash, m.hash)
+			return resource.Update(tuiWindowSize)
 		}
 	case markReadMsg:
 		m.list.SetItems(msg.items)
@@ -89,7 +93,7 @@ func readMarkItems(group, hash string) (list.Model, error) {
 
 	items := []list.Item{}
 	for _, m := range mark.Mappings {
-		items = append(items, markItem{hash: m.Hash, identifier: m.Module})
+		items = append(items, markItem{hash: m.Hash, plugin: m.Module})
 	}
 
 	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil
