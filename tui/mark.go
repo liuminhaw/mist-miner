@@ -28,18 +28,21 @@ type markModel struct {
 	list   list.Model
 	width  int
 	height int
+
+	prevModel tea.Model
 }
 
-func InitMarkModel(group, markHash string) (tea.Model, error) {
+func InitMarkModel(group, markHash string, prev tea.Model) (tea.Model, error) {
 	list, err := readMarkItems(group, markHash)
 	if err != nil {
 		return nil, fmt.Errorf("InitMarkModel(%s, %s): %w", group, markHash, err)
 	}
 
 	model := markModel{
-		hash:  markHash,
-		group: group,
-		list:  list,
+		hash:      markHash,
+		group:     group,
+		list:      list,
+		prevModel: prev,
 	}
 	model.list.Title = fmt.Sprintf("Mark: %s in group %s", markHash[:8], group)
 	model.list.SetStatusBarItemName("entry", "entries")
@@ -57,7 +60,7 @@ func (m markModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		tuiWindowSize = msg
-		h, v := docStyle.GetFrameSize()
+		h, v := listStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 		return m, nil
 	case tea.KeyMsg:
@@ -65,11 +68,10 @@ func (m markModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "ctrl+z":
-			logModel, _ := InitLogModel(m.group)
-			return logModel.Update(tuiWindowSize)
+			return m.prevModel.Update(tuiWindowSize)
 		case "enter":
 			selectedItem := m.list.SelectedItem().(markItem)
-			resource, _ := InitResourceModel(m.group, selectedItem.hash, m.hash)
+			resource, _ := InitResourceModel(m.group, selectedItem.hash, m)
 			return resource.Update(tuiWindowSize)
 		}
 	case markReadMsg:
@@ -82,7 +84,7 @@ func (m markModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m markModel) View() string {
-	return docStyle.Render(m.list.View())
+	return listStyle.Render(m.list.View())
 }
 
 func readMarkItems(group, hash string) (list.Model, error) {

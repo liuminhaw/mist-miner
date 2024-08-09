@@ -29,20 +29,20 @@ type resourceModel struct {
 	width  int
 	height int
 
-	incomeHash string
+	prevModel tea.Model
 }
 
-func InitResourceModel(group, resourceHash, markHash string) (tea.Model, error) {
+func InitResourceModel(group, resourceHash string, prev tea.Model) (tea.Model, error) {
 	list, err := readResourceItems(group, resourceHash)
 	if err != nil {
 		return nil, fmt.Errorf("InitResourceModel(%s, %s): %w", group, resourceHash, err)
 	}
 
 	model := resourceModel{
-		hash:  resourceHash,
-		group: group,
-		list:  list,
-        incomeHash: markHash,
+		hash:      resourceHash,
+		group:     group,
+		list:      list,
+		prevModel: prev,
 	}
 	model.list.Title = fmt.Sprintf("Plugin: %s in group %s", resourceHash[:8], group)
 	model.list.SetStatusBarItemName("entry", "entries")
@@ -60,7 +60,7 @@ func (m resourceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		tuiWindowSize = msg
-		h, v := docStyle.GetFrameSize()
+		h, v := listStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 		return m, nil
 	case tea.KeyMsg:
@@ -68,8 +68,11 @@ func (m resourceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "ctrl+z":
-			markModel, _ := InitMarkModel(m.group, m.incomeHash)
-			return markModel.Update(tuiWindowSize)
+			return m.prevModel.Update(tuiWindowSize)
+		case "enter":
+			selectedItem := m.list.SelectedItem().(resourceItem)
+			detail, _ := InitResourceDetailModel(m.group, selectedItem.hash, m)
+			return detail.Update(tuiWindowSize)
 		}
 	case markReadMsg:
 		m.list.SetItems(msg.items)
@@ -81,7 +84,7 @@ func (m resourceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m resourceModel) View() string {
-	return docStyle.Render(m.list.View())
+	return listStyle.Render(m.list.View())
 }
 
 func readResourceItems(group, hash string) (list.Model, error) {

@@ -56,20 +56,18 @@ func (m logModel) Init() tea.Cmd {
 func (m logModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-        tuiWindowSize = msg
-		h, v := docStyle.GetFrameSize()
+		tuiWindowSize = msg
+		h, v := listStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-        case "enter":
-            selectedItem := m.list.SelectedItem().(logItem)
-            mark, _ := InitMarkModel(m.group, selectedItem.hash)
-            return mark.Update(tuiWindowSize)
-			// case "esc":
-			// 	m.state = logView
+		case "enter":
+			selectedItem := m.list.SelectedItem().(logItem)
+			mark, _ := InitMarkModel(m.group, selectedItem.hash, m)
+			return mark.Update(tuiWindowSize)
 		}
 	}
 	var cmd tea.Cmd
@@ -78,7 +76,7 @@ func (m logModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m logModel) View() string {
-	return docStyle.Render(m.list.View())
+	return listStyle.Render(m.list.View())
 }
 
 func readLogItems(group string) (list.Model, error) {
