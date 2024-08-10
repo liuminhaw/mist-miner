@@ -35,22 +35,11 @@ func ReadIdentifierHashMaps(group, hash string) (*IdentifierHashMaps, error) {
 		Group: group,
 		Maps:  []IdentifierHashMap{},
 	}
-	hashFile, err := ObjectFile(idHashMaps.Group, idHashMaps.Hash)
+
+	r, err := objectReader(idHashMaps.Group, idHashMaps.Hash)
 	if err != nil {
 		return nil, fmt.Errorf("read identifier hash maps: %w", err)
 	}
-
-	f, err := os.Open(hashFile)
-	if err != nil {
-		return nil, fmt.Errorf("read identifier hash maps: open file: %w", err)
-	}
-	defer f.Close()
-
-	r, err := zlib.NewReader(f)
-	if err != nil {
-		return nil, fmt.Errorf("read identifier hash maps: create zlib reader: %w", err)
-	}
-	defer r.Close()
 
 	// Scan in hash identifier pairs
 	scanner := bufio.NewScanner(r)
@@ -244,22 +233,11 @@ func ReadMark(group, mapHash string) (*LabelMark, error) {
 		Group:    group,
 		Mappings: []MarkMapping{},
 	}
-	hashFile, err := ObjectFile(mark.Group, mark.Hash)
+
+	r, err := objectReader(mark.Group, mark.Hash)
 	if err != nil {
 		return nil, fmt.Errorf("read label mark: %w", err)
 	}
-
-	f, err := os.Open(hashFile)
-	if err != nil {
-		return nil, fmt.Errorf("read label mark: open file: %w", err)
-	}
-	defer f.Close()
-
-	r, err := zlib.NewReader(f)
-	if err != nil {
-		return nil, fmt.Errorf("read label mark: create zlib reader: %w", err)
-	}
-	defer r.Close()
 
 	scanner := bufio.NewScanner(r)
 	// Scan the timestamp.

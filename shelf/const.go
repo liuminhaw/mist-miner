@@ -53,30 +53,14 @@ func ObjectFile(group, objectHash string) (string, error) {
 
 // ObjectRead returns the content of the object with the given hash value
 func ObjectRead(group, objectHash string) (string, error) {
-	objectFile, err := ObjectFile(group, objectHash)
+	r, err := objectReader(group, objectHash)
 	if err != nil {
-		return "", fmt.Errorf("object content: %w", err)
+		return "", fmt.Errorf("ObjectRead(%s, %s): %w", group, objectHash, err)
 	}
-
-	if _, err := os.Stat(objectFile); os.IsNotExist(err) {
-		return "", fmt.Errorf("object content: %w", err)
-	}
-
-	f, err := os.Open(objectFile)
-	if err != nil {
-		return "", fmt.Errorf("object content: %w", err)
-	}
-	defer f.Close()
-
-	r, err := zlib.NewReader(f)
-	if err != nil {
-		return "", fmt.Errorf("object content: %w", err)
-	}
-	defer r.Close()
 
 	b, err := io.ReadAll(r)
 	if err != nil {
-		return "", fmt.Errorf("object content: %w", err)
+		return "", fmt.Errorf("ObjectRead(%s, %s): %w", group, objectHash, err)
 	}
 
 	var prettyJson bytes.Buffer
@@ -96,4 +80,30 @@ func RefFile(group, name string) (string, error) {
 	}
 
 	return filepath.Join(filepath.Dir(execPath), SHELF_DIR, group, "refs", name), nil
+}
+
+// objectReader returns a io ReaderCloser to the object with the given group and hash value
+func objectReader(group, objectHash string) (io.ReadCloser, error) {
+	objectFile, err := ObjectFile(group, objectHash)
+	if err != nil {
+		return nil, fmt.Errorf("objectReader(%s, %s): %w", group, objectHash, err)
+	}
+
+	if _, err := os.Stat(objectFile); os.IsNotExist(err) {
+		return nil, fmt.Errorf("objectReader(%s, %s): %w", group, objectHash, err)
+	}
+
+	f, err := os.Open(objectFile)
+	if err != nil {
+		return nil, fmt.Errorf("objectReader(%s, %s): %w", group, objectHash, err)
+	}
+	defer f.Close()
+
+	r, err := zlib.NewReader(f)
+	if err != nil {
+		return nil, fmt.Errorf("objectReader(%s, %s): %w", group, objectHash, err)
+	}
+	defer r.Close()
+
+	return r, nil
 }
