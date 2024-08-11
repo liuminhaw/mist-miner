@@ -61,6 +61,7 @@ func (m *MinerProperty) FormatContentValue(data any) error {
 
 type MinerResource struct {
 	Identifier string
+    Alias string
 	Properties []MinerProperty
 }
 

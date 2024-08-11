@@ -25,6 +25,7 @@ func (m *GRPCClient) Mine(config MinerConfig) (MinerResources, error) {
 	for _, resource := range resources.Resources {
 		minerResource := MinerResource{
 			Identifier: resource.Identifier,
+			Alias:      resource.Alias,
 			Properties: []MinerProperty{},
 		}
 		for _, data := range resource.Properties {
@@ -47,19 +48,19 @@ func (m *GRPCClient) Mine(config MinerConfig) (MinerResources, error) {
 }
 
 func toProtoMinerConfig(config MinerConfig) *proto.MinerConfig {
-    equipments := []*proto.MinerConfigEquipment{}
-    for _, equipment := range config.Equipments {
-        equipments = append(equipments, &proto.MinerConfigEquipment{
-            Type: equipment.Type,
-            Name: equipment.Name,
-            Attributes: equipment.Attributes,
-        })
-    }
+	equipments := []*proto.MinerConfigEquipment{}
+	for _, equipment := range config.Equipments {
+		equipments = append(equipments, &proto.MinerConfigEquipment{
+			Type:       equipment.Type,
+			Name:       equipment.Name,
+			Attributes: equipment.Attributes,
+		})
+	}
 
-    return &proto.MinerConfig{
-        Auth: config.Auth,
-        Equipments: equipments,
-    }
+	return &proto.MinerConfig{
+		Auth:       config.Auth,
+		Equipments: equipments,
+	}
 }
 
 // GRPCServer is the server that GRPCClient talks to
@@ -78,9 +79,12 @@ func (m *GRPCServer) Mine(
 
 	resources, err := m.Impl.Mine(toSharedMinerConfig(req))
 	fmt.Printf("Resources: %+v\n", resources)
+
+	// Convert shared resources to proto resources
 	for _, resource := range resources {
 		protoResource := proto.MinerResource{
 			Identifier: resource.Identifier,
+			Alias:      resource.Alias,
 			Properties: []*proto.MinerProperty{},
 		}
 		for _, data := range resource.Properties {
@@ -105,17 +109,17 @@ func (m *GRPCServer) Mine(
 }
 
 func toSharedMinerConfig(config *proto.MinerConfig) MinerConfig {
-    equipments := []MinerConfigEquipment{}
-    for _, equipment := range config.Equipments {
-        equipments = append(equipments, MinerConfigEquipment{
-            Type: equipment.Type,
-            Name: equipment.Name,
-            Attributes: equipment.Attributes,
-        })
-    }
+	equipments := []MinerConfigEquipment{}
+	for _, equipment := range config.Equipments {
+		equipments = append(equipments, MinerConfigEquipment{
+			Type:       equipment.Type,
+			Name:       equipment.Name,
+			Attributes: equipment.Attributes,
+		})
+	}
 
-    return MinerConfig{
-        Auth: config.Auth,
-        Equipments: equipments,
-    }
+	return MinerConfig{
+		Auth:       config.Auth,
+		Equipments: equipments,
+	}
 }

@@ -39,7 +39,8 @@ message MinerProperty{
 
 message MinerResource{
     string identifier = 1;
-    repeated MinerProperty properties = 2;
+    string alias = 2;
+    repeated MinerProperty properties = 3;
 }
 
 message MinerResources{
