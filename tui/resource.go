@@ -9,17 +9,22 @@ import (
 )
 
 type resourceItem struct {
+	alias      string
 	hash       string
 	identifier string
 }
 
 func (i resourceItem) Title() string { return i.identifier }
 func (i resourceItem) Description() string {
-	return fmt.Sprintf("hash: %s", i.hash)
+	if i.alias != "" {
+		return fmt.Sprintf("hash: %s, alias: %s", i.hash[:12], i.alias)
+	} else {
+		return fmt.Sprintf("hash: %s", i.hash[:12])
+	}
 }
 
 func (i resourceItem) FilterValue() string {
-	return fmt.Sprintf("%s %s", i.hash, i.identifier)
+	return fmt.Sprintf("%s %s %s", i.identifier, i.alias, i.hash[:12])
 }
 
 type resourceModel struct {
@@ -95,7 +100,7 @@ func readResourceItems(group, hash string) (list.Model, error) {
 
 	items := []list.Item{}
 	for _, m := range idHashMaps.Maps {
-		items = append(items, resourceItem{hash: m.Hash, identifier: m.Identifier})
+		items = append(items, resourceItem{alias: m.Alias, hash: m.Hash, identifier: m.Identifier})
 	}
 
 	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil

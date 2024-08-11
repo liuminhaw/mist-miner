@@ -16,6 +16,7 @@ import (
 
 type IdentifierHashMap struct {
 	Identifier string
+	Alias      string
 	Hash       string
 }
 
@@ -46,13 +47,21 @@ func ReadIdentifierHashMaps(group, hash string) (*IdentifierHashMaps, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		fields := strings.Fields(line)
-		if len(fields) != 2 {
+		switch len(fields) {
+		case 2:
+			idHashMaps.Maps = append(idHashMaps.Maps, IdentifierHashMap{
+				Hash:       fields[0],
+				Identifier: fields[1],
+			})
+		case 3:
+			idHashMaps.Maps = append(idHashMaps.Maps, IdentifierHashMap{
+				Hash:       fields[0],
+				Identifier: fields[1],
+				Alias:      fields[2],
+			})
+		default:
 			return nil, fmt.Errorf("read identifier hash maps: invalid mapping: %s", line)
 		}
-		idHashMaps.Maps = append(idHashMaps.Maps, IdentifierHashMap{
-			Hash:       fields[0],
-			Identifier: fields[1],
-		})
 	}
 
 	return &idHashMaps, nil
@@ -110,7 +119,11 @@ func (lhm *IdentifierHashMaps) Write() error {
 // and then the buffer is hashed with sha256 to get the hash value.
 func (lhm *IdentifierHashMaps) calcHash() error {
 	for _, m := range lhm.Maps {
-		fmt.Fprintf(&lhm.buffer, "%s %s\n", m.Hash, m.Identifier)
+		if m.Alias != "" {
+			fmt.Fprintf(&lhm.buffer, "%s %s %s\n", m.Hash, m.Identifier, m.Alias)
+		} else {
+			fmt.Fprintf(&lhm.buffer, "%s %s\n", m.Hash, m.Identifier)
+		}
 	}
 
 	h := sha256.New()

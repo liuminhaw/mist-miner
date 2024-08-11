@@ -168,8 +168,14 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 			return err
 		}
 
+		alias, err := stuff.ResourceAlias()
+		if err != nil {
+			return err
+		}
+
 		labelMap.Maps = append(labelMap.Maps, shelf.IdentifierHashMap{
 			Identifier: identifier,
+			Alias:      alias,
 			Hash:       stuff.Hash,
 		})
 

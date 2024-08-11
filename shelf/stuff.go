@@ -13,8 +13,7 @@ import (
 )
 
 type Stuff struct {
-	Hash string
-	// Module   string
+	Hash     string
 	Identity string
 	Resource []byte
 }
@@ -79,4 +78,16 @@ func (s *Stuff) ResourceIdentifier() (string, error) {
 	}
 
 	return resource.Identifier, nil
+}
+
+// ResourceAlias extract and return Alias value from stored resource
+func (s *Stuff) ResourceAlias() (string, error) {
+	resource := shared.MinerResource{}
+
+	err := json.Unmarshal(s.Resource, &resource)
+	if err != nil {
+		return "", fmt.Errorf("resource alias: unmarshal: %w", err)
+	}
+
+	return resource.Alias, nil
 }
