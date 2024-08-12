@@ -1,45 +1,65 @@
 package tui
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/liuminhaw/mist-miner/shared"
 	"github.com/liuminhaw/mist-miner/shelf"
 )
 
+// Custom struct for tea messages
+type prevPageMsg struct{}
 // You generally won't need this unless you're processing stuff with
 // complicated ANSI escape sequences. Turn it on if you notice flickering.
 //
 // Also keep in mind that high performance rendering only works for programs
 // that use the full size of the terminal. We're enabling that below with
 // tea.EnterAltScreen().
-const useHighPerformanceRenderer = false
+// var useHighPerformanceRenderer = true
 
 type resourceDetailModel struct {
-	group    string
-	hash     string
-	content  string
-	ready    bool
-	viewport viewport.Model
+	group           string
+	hash            string
+	content         string
+	ready           bool
+	viewport        viewport.Model
+	highPerformance bool
 
 	prevModel tea.Model
 }
 
-func InitResourceDetailModel(group, hash string, prev tea.Model) (tea.Model, error) {
+func InitResourceDetailModel(
+	group, hash string,
+	prev tea.Model,
+) (tea.Model, error) {
 	content, err := shelf.ObjectRead(group, hash)
 	if err != nil {
 		return nil, fmt.Errorf("InitResourceDetailModel(%s, %s): %w", group, hash, err)
 	}
 
+	resource := shared.MinerResource{}
+	if err := json.Unmarshal([]byte(content), &resource); err != nil {
+		return nil, fmt.Errorf("InitResourceDetailModel(%s, %s): %w", group, hash, err)
+	}
+	resourceMd, err := resource.RenderMarkdown()
+	if err != nil {
+		return nil, fmt.Errorf("InitResourceDetailModel(%s, %s): %w", group, hash, err)
+	}
+
 	model := resourceDetailModel{
-		group:     group,
-		hash:      hash,
-		content:   content,
-		ready:     false,
-		prevModel: prev,
+		group: group,
+		hash:  hash,
+		// content:   content,
+		content:         resourceMd,
+		ready:           false,
+		prevModel:       prev,
+		highPerformance: true,
 	}
 
 	return model, nil
@@ -65,8 +85,27 @@ func (m resourceDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.ready {
 			m.viewport = viewport.New(msg.Width-h, msg.Height-v-verticalMarginHeight)
 			m.viewport.YPosition = headerHeight
-			m.viewport.HighPerformanceRendering = useHighPerformanceRenderer
-			m.viewport.SetContent(m.content)
+
+			// Set glamour viewport content
+			glamourContent := ""
+			renderer, err := glamour.NewTermRenderer(
+				glamour.WithAutoStyle(),
+				glamour.WithWordWrap(m.viewport.Width-2),
+			)
+			if err != nil {
+				m.highPerformance = false
+				glamourContent = fmt.Sprintf("glamour renderer error: %s", err)
+			} else {
+				glamourContent, err = renderer.Render(m.content)
+				if err != nil {
+					m.highPerformance = false
+					glamourContent = fmt.Sprintf("glamour render error: %s", err)
+				}
+			}
+
+			// m.viewport.SetContent(m.content)
+			m.viewport.HighPerformanceRendering = m.highPerformance
+			m.viewport.SetContent(glamourContent)
 			m.ready = true
 			m.viewport.YPosition = headerHeight + 1
 		} else {
@@ -74,7 +113,7 @@ func (m resourceDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.Height = msg.Height - verticalMarginHeight - v
 		}
 
-		if useHighPerformanceRenderer {
+		if m.highPerformance {
 			cmds = append(cmds, viewport.Sync(m.viewport))
 		}
 	case tea.KeyMsg:
@@ -82,8 +121,11 @@ func (m resourceDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "ctrl+z":
-			return m.prevModel.Update(tuiWindowSize)
+			cmds = append(cmds, tea.ClearScrollArea, func() tea.Msg { return prevPageMsg{} })
+			return m, tea.Batch(cmds...)
 		}
+	case prevPageMsg:
+		return m.prevModel.Update(tuiWindowSize)
 	}
 
 	// Handle keyboard and mouse events in the viewport
@@ -103,7 +145,7 @@ func (m resourceDetailModel) View() string {
 }
 
 func (m resourceDetailModel) headerView() string {
-	title := detailTitleStyle.Render("Mr. Placeholder")
+	title := detailTitleStyle.Render(fmt.Sprintf("Resource: %s", m.hash[:12]))
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color(colorTitleBackground)).Margin(1, 0, 1, 0)
 	line := style.Render(strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title))))
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
@@ -122,3 +164,4 @@ func max(a, b int) int {
 	}
 	return b
 }
+
