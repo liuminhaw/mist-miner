@@ -10,18 +10,6 @@ Build main cli
 go build -o mist-miner
 ```
 
-Build plugin mm-s3
-
-```bash
-go build -o ./plugins/bin/mm-s3 ./plugins/mm-s3
-```
-
-Set which plugin binary to use
-
-```bash
-export PLUGIN_BINARY="./mm-s3"
-```
-
 Execution
 
 ```bash
@@ -51,7 +39,25 @@ zlib-flate -uncompress < input_file_path
 # Note
 
 ## Plugins
-Plugins have the responsibility to return consistent data if there is no change on the resource. 
-The shared library provided a `JsonNormalize` helper function to normalize input json string
-by sorting the keys of each object. Also `MinerProperty` struct has `FormatContentValue` method
-that help to set data format in normalized json string or just normal string.
+Plugins are responsible for returning consistent data when there are no changes to the resource. 
+The `shared` library offers a `JsonNormalize` helper function that normalizes input JSON strings 
+by sorting the keys of each object. Additionally, the `MinerProperty` struct includes a `FormatContentValue` method, 
+which formats the data either as a normalized JSON string or as a regular string.
+
+### Example
+```go
+property := shared.MinerProperty{
+	Type: userDetail,
+	Label: shared.MinerPropertyLabel{
+		Name:   "UserDetail",
+		Unique: true,
+	},
+	Content: shared.MinerPropertyContent{
+		Format: shared.FormatJson,
+	},
+}
+if err := property.FormatContentValue(ud.configuration.User); err != nil {
+	return properties, fmt.Errorf("generate user detail: %w", err)
+}
+```
+

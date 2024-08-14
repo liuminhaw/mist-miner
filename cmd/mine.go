@@ -158,6 +158,8 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 		Maps:  []shelf.IdentifierHashMap{},
 	}
 	for _, resource := range resources {
+		resource.Sort()
+
 		stuff, err := shelf.NewStuff(pMod.group, resource)
 		if err != nil {
 			return err
