@@ -14,7 +14,11 @@ import (
 )
 
 // Custom struct for tea messages
-type prevPageMsg struct{}
+type (
+	prevPageMsg     struct{}
+	reloadDetailMsg struct{}
+)
+
 // You generally won't need this unless you're processing stuff with
 // complicated ANSI escape sequences. Turn it on if you notice flickering.
 //
@@ -77,6 +81,8 @@ func (m resourceDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		tuiWindowSize = msg
+
 		headerHeight := lipgloss.Height(m.headerView())
 		footerHeight := lipgloss.Height(m.footerView())
 		verticalMarginHeight := headerHeight + footerHeight
@@ -103,19 +109,24 @@ func (m resourceDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			// m.viewport.SetContent(m.content)
+			glamourContent = detailDocStyle.Render(glamourContent)
+
 			m.viewport.HighPerformanceRendering = m.highPerformance
 			m.viewport.SetContent(glamourContent)
 			m.ready = true
-			m.viewport.YPosition = headerHeight + 1
+			// m.viewport.YPosition = headerHeight + 1
 		} else {
-			m.viewport.Width = msg.Width - h
-			m.viewport.Height = msg.Height - verticalMarginHeight - v
+			cmds = append(cmds, tea.ClearScrollArea, func() tea.Msg { return reloadDetailMsg{} })
+			return m, tea.Sequence(cmds...)
 		}
 
 		if m.highPerformance {
 			cmds = append(cmds, viewport.Sync(m.viewport))
 		}
+
+		m.viewport, cmd = m.viewport.Update(msg)
+		cmds = append(cmds, cmd)
+		return m, tea.Batch(cmds...)
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -126,6 +137,9 @@ func (m resourceDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case prevPageMsg:
 		return m.prevModel.Update(tuiWindowSize)
+	case reloadDetailMsg:
+		detail, _ := InitResourceDetailModel(m.group, m.hash, m.prevModel)
+		return detail.Update(tuiWindowSize)
 	}
 
 	// Handle keyboard and mouse events in the viewport
@@ -164,4 +178,3 @@ func max(a, b int) int {
 	}
 	return b
 }
-
