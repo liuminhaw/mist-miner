@@ -44,7 +44,7 @@ func ObjectDir(group, prefixBytes string) (string, error) {
 		return "", fmt.Errorf("object dir: get executable: %w", err)
 	}
 
-	return filepath.Join(filepath.Dir(execPath), SHELF_DIR, group, "objects", prefixBytes), nil
+	return filepath.Join(filepath.Dir(execPath), SHELF_DIR, group, SHELF_OBJECT_DIR, prefixBytes), nil
 }
 
 // ObjectFile returns the file path to store the object record with the given file name
@@ -85,7 +85,7 @@ func RefFile(group, name string) (string, error) {
 		return "", fmt.Errorf("ref dir: get executable: %w", err)
 	}
 
-	return filepath.Join(filepath.Dir(execPath), SHELF_DIR, group, "refs", name), nil
+	return filepath.Join(filepath.Dir(execPath), SHELF_DIR, group, SHELF_REF_DIR, name), nil
 }
 
 // objectReader returns a io ReaderCloser to the object with the given group and hash value
