@@ -12,6 +12,12 @@ import (
 
 const (
 	SHELF_DIR = ".miner"
+
+	SHELF_REF_DIR     = "refs"
+	SHELF_OBJECT_DIR  = "objects"
+	SHELF_HISTORY_DIR = "history"
+
+	SHELF_HISTORY_FILE = "logger"
 )
 
 // ObjectDir returns the directory path to store all object type of records
