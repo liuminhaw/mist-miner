@@ -12,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/liuminhaw/mist-miner/locks"
 )
 
 type IdentifierHashMap struct {
@@ -142,6 +144,15 @@ type RefMark struct {
 	Reference []byte
 }
 
+func NewRefMark(name, group string) (RefMark, error) {
+	mark := RefMark{Name: name, Group: group}
+	if err := mark.getReference(); err != nil {
+		return RefMark{}, fmt.Errorf("NewRefMark(%s, %s): %w", name, group, err)
+	}
+
+	return mark, nil
+}
+
 // write writes the reference to the HEAD file.
 // reference is the hash of the latest label mark.
 func (m *RefMark) write() error {
@@ -169,31 +180,47 @@ func (m *RefMark) write() error {
 	return nil
 }
 
-// CurrentRef returns the reference of headMark
-// which is the hash of the latest label mark.
-func (m *RefMark) CurrentRef() ([]byte, error) {
-	RefFile, err := RefFile(m.Group, m.Name)
+// getReference reads the reference from the HEAD file and sets it to the Reference field.
+// Will use flock to prevent writing while reading,
+// return locks.ErrIsLocked if file lock is not acquired.
+func (m *RefMark) getReference() error {
+	file, err := RefFile(m.Group, m.Name)
 	if err != nil {
-		return nil, fmt.Errorf("ref mark current ref: %w", err)
+		return fmt.Errorf("getReference(): %w", err)
 	}
 
-	if _, err := os.Stat(RefFile); errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("ref mark read: file not found: %w", err)
+	if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("getReference(): %w", err)
 	}
 
-	f, err := os.Open(RefFile)
+	fileLock, err := locks.NewLock(locks.REF_MARK_LOCKFILE)
 	if err != nil {
-		return nil, fmt.Errorf("ref mark read: open file: %w", err)
+		return fmt.Errorf("getReference(): %w", err)
+	}
+	locked, err := fileLock.TryRLock()
+	if err != nil {
+		return fmt.Errorf("getReference(): %w", err)
+	}
+	defer fileLock.Unlock()
+
+	if !locked {
+		return locks.ErrIsLocked
+	}
+
+	f, err := os.Open(file)
+	if err != nil {
+		return fmt.Errorf("getReference(): %w", err)
 	}
 	defer f.Close()
 
 	b := make([]byte, sha256.BlockSize)
 	_, err = f.Read(b)
 	if err != nil {
-		return nil, fmt.Errorf("ref mark read: read file: %w", err)
+		return fmt.Errorf("gerReference: %w", err)
 	}
 
-	return b, nil
+	m.Reference = b
+	return nil
 }
 
 type MarkMapping struct {
@@ -220,20 +247,13 @@ func NewMark(plugName, group, gmapHash string) (*LabelMark, error) {
 		Mappings:  []MarkMapping{},
 	}
 
-	head := RefMark{
-		Name:  "HEAD",
-		Group: group,
-	}
-	headFile, err := RefFile(head.Group, head.Name)
-	if err != nil {
+	head, err := NewRefMark(SHELF_MARK_FILE, group)
+	if errors.Is(err, os.ErrNotExist) {
+		mark.Parent = "nil"
+	} else if err != nil {
 		return nil, fmt.Errorf("new label mark: %w", err)
-	}
-	if _, err := os.Stat(headFile); !errors.Is(err, os.ErrNotExist) {
-		parent, err := head.CurrentRef()
-		if err != nil {
-			return nil, fmt.Errorf("new label mark: head ref: %w", err)
-		}
-		mark.Parent = string(parent)
+	} else {
+		mark.Parent = string(head.Reference)
 	}
 
 	return &mark, nil
@@ -347,7 +367,7 @@ func (lm *LabelMark) Update() error {
 // calcHash calculates the hash of the label mark file content.
 func (lm *LabelMark) calcHash() error {
 	var parent string
-	if lm.Parent == "" {
+	if lm.Parent == "" || lm.Parent == "nil" {
 		parent = "nil"
 	} else {
 		parent = lm.Parent

@@ -81,12 +81,9 @@ func (m logModel) View() string {
 
 func readLogItems(group string) (list.Model, error) {
 	items := []list.Item{}
-	var err error
-	head := shelf.RefMark{
-		Name:  "HEAD",
-		Group: group,
-	}
-	head.Reference, err = head.CurrentRef()
+	// var err error
+
+	head, err := shelf.NewRefMark(shelf.SHELF_MARK_FILE, group)
 	if err != nil {
 		return list.Model{}, fmt.Errorf("readLogItems: %w", err)
 	}

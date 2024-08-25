@@ -17,6 +17,7 @@ const (
 	SHELF_OBJECT_DIR  = "objects"
 	SHELF_HISTORY_DIR = "history"
 
+	SHELF_MARK_FILE    = "HEAD"
 	SHELF_HISTORY_FILE = "logger"
 )
 
@@ -44,7 +45,13 @@ func ObjectDir(group, prefixBytes string) (string, error) {
 		return "", fmt.Errorf("object dir: get executable: %w", err)
 	}
 
-	return filepath.Join(filepath.Dir(execPath), SHELF_DIR, group, SHELF_OBJECT_DIR, prefixBytes), nil
+	return filepath.Join(
+		filepath.Dir(execPath),
+		SHELF_DIR,
+		group,
+		SHELF_OBJECT_DIR,
+		prefixBytes,
+	), nil
 }
 
 // ObjectFile returns the file path to store the object record with the given file name
@@ -82,7 +89,7 @@ func ObjectRead(group, objectHash string) (string, error) {
 func RefFile(group, name string) (string, error) {
 	execPath, err := os.Executable()
 	if err != nil {
-		return "", fmt.Errorf("ref dir: get executable: %w", err)
+		return "", fmt.Errorf("RefFile(%s, %s): get executable: %w", group, name, err)
 	}
 
 	return filepath.Join(filepath.Dir(execPath), SHELF_DIR, group, SHELF_REF_DIR, name), nil
