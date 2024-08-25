@@ -19,6 +19,8 @@ const (
 
 	SHELF_MARK_FILE    = "HEAD"
 	SHELF_HISTORY_FILE = "logger"
+
+	SHELF_HISTORY_LOGS_PER_PAGE = 1000
 )
 
 // ObjectDir returns the directory path to store all object type of records

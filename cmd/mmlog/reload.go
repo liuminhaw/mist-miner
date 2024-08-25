@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const LOGS_PER_PAGE = 1000
-
 // reloadCmd represents the reload command
 var reloadCmd = &cobra.Command{
 	Use:   "reload <group>",
@@ -22,7 +20,7 @@ var reloadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		group := args[0]
 
-		if err := shelf.GenerateHistoryRecords(group, LOGS_PER_PAGE); err != nil {
+		if err := shelf.GenerateHistoryRecords(group, shelf.SHELF_HISTORY_LOGS_PER_PAGE); err != nil {
 			fmt.Println("Error generating history records:", err)
 			os.Exit(1)
 		}

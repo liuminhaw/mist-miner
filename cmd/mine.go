@@ -68,12 +68,13 @@ var mineCmd = &cobra.Command{
 			for _, mapping := range label.Mappings {
 				fmt.Printf("Module: %s, Hash: %s\n", mapping.Module, mapping.Hash)
 			}
-		}
 
-		// if err := run(); err != nil {
-		// 	fmt.Printf("error: %+v\n", err)
-		// 	os.Exit(1)
-		// }
+			// Update history logs record
+			if err := shelf.GenerateHistoryRecords(group, shelf.SHELF_HISTORY_LOGS_PER_PAGE); err != nil {
+				fmt.Printf("Error generating history records: %s\n", err)
+				os.Exit(1)
+			}
+		}
 
 		os.Exit(0)
 	},
