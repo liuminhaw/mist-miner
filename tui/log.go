@@ -27,10 +27,11 @@ func (i logItem) FilterValue() string {
 }
 
 type logModel struct {
-	group  string
-	list   list.Model
-	width  int
-	height int
+	group    string
+	logIndex int
+	list     list.Model
+	width    int
+	height   int
 }
 
 func InitLogModel(group string, logIdx int) (tea.Model, error) {
@@ -40,8 +41,9 @@ func InitLogModel(group string, logIdx int) (tea.Model, error) {
 	}
 
 	model := logModel{
-		group: group,
-		list:  list,
+		group:    group,
+		list:     list,
+		logIndex: logIdx,
 	}
 	model.list.Title = fmt.Sprintf("Mined logs for group %s", group)
 	model.list.SetStatusBarItemName("entry", "entries")
@@ -68,6 +70,16 @@ func (m logModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "enter":
 			selectedItem := m.list.SelectedItem().(logItem)
+			if strings.Contains(selectedItem.hash, shelf.SHELF_HISTORY_LOGS_PREV) {
+				model, _ := InitLogModel(m.group, m.logIndex-1)
+				logModel, _ := model.(logModel)
+				logModel.list.Select(len(logModel.list.Items()) - 1)
+				return logModel.Update(tuiWindowSize)
+			}
+			if strings.Contains(selectedItem.hash, shelf.SHELF_HISTORY_LOGS_NEXT) {
+				logModel, _ := InitLogModel(m.group, m.logIndex+1)
+				return logModel.Update(tuiWindowSize)
+			}
 			mark, _ := InitMarkModel(m.group, selectedItem.hash, m)
 			return mark.Update(tuiWindowSize)
 		}
