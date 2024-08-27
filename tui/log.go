@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"bufio"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -31,8 +33,8 @@ type logModel struct {
 	height int
 }
 
-func InitLogModel(group string) (tea.Model, error) {
-	list, err := readLogItems(group)
+func InitLogModel(group string, logIdx int) (tea.Model, error) {
+	list, err := readLogItems(group, logIdx)
 	if err != nil {
 		return nil, fmt.Errorf("InitLogModel(%s): %w", group, err)
 	}
@@ -79,28 +81,34 @@ func (m logModel) View() string {
 	return listStyle.Render(m.list.View())
 }
 
-func readLogItems(group string) (list.Model, error) {
+func readLogItems(group string, logIdx int) (list.Model, error) {
 	items := []list.Item{}
-	// var err error
 
-	head, err := shelf.NewRefMark(shelf.SHELF_MARK_FILE, group)
+	record, err := shelf.NewHistoryRecord(group, logIdx)
 	if err != nil {
-		return list.Model{}, fmt.Errorf("readLogItems: %w", err)
+		return list.Model{}, fmt.Errorf("readLogItems(%s): %w", group, err)
+	}
+	defer record.CloseFile()
+
+	recordReader, err := record.ReadFile()
+	if err != nil {
+		return list.Model{}, fmt.Errorf("readLogItems(%s): %w", group, err)
+	}
+	defer recordReader.Close()
+
+	scanner := bufio.NewScanner(recordReader)
+	for scanner.Scan() {
+		recordFields := strings.Split(scanner.Text(), " ")
+		recordHash := recordFields[0]
+		recordTimestamp, err := time.Parse(time.RFC3339, recordFields[1])
+		if err != nil {
+			return list.Model{}, fmt.Errorf("readLogItems(%s): %w", group, err)
+		}
+		items = append(items, logItem{hash: recordHash, timestamp: recordTimestamp})
 	}
 
-	reference := string(head.Reference)
-	for {
-		mark, err := shelf.ReadMark(group, reference)
-		if err != nil {
-			return list.Model{}, fmt.Errorf("readLogItems: %w", err)
-		}
-		items = append(items, logItem{hash: mark.Hash, timestamp: mark.TimeStamp})
-
-		if mark.Parent == "nil" {
-			break
-		} else {
-			reference = mark.Parent
-		}
+	if err := scanner.Err(); err != nil {
+		return list.Model{}, fmt.Errorf("readLogItems(%s): %w", group, err)
 	}
 
 	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil

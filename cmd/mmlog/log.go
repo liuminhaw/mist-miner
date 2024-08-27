@@ -22,7 +22,7 @@ var LogCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		group := args[0]
 
-		model, err := tui.InitLogModel(group)
+		model, err := tui.InitLogModel(group, 0)
 		if err != nil {
 			fmt.Println("Error initializing log model:", err)
 			os.Exit(1)
