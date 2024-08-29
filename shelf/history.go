@@ -42,7 +42,7 @@ func (hr *HistoryRecord) NewFile() error {
 
 // ReadFile reads the file from the group and index set in the HistoryRecord struct,
 // extract with zlib and return the result as a io.ReadCloser
-func (hr *HistoryRecord) ReadFile() (io.ReadCloser, error) {
+func (hr *HistoryRecord) Read() (io.ReadCloser, error) {
 	if err := hr.openFile(); err != nil {
 		return nil, fmt.Errorf("Read(): %w", err)
 	}

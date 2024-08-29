@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/liuminhaw/mist-miner/locks"
 	"github.com/liuminhaw/mist-miner/shelf"
 )
 
@@ -98,14 +99,28 @@ func readLogItems(group string, logIdx int) (list.Model, error) {
 
 	record, err := shelf.NewHistoryRecord(group, logIdx)
 	if err != nil {
-		return list.Model{}, fmt.Errorf("readLogItems(%s): %w", group, err)
+		return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
+	}
+
+	fileLock, err := locks.NewLock(locks.HISTORY_LOCKFILE)
+	if err != nil {
+		return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
+	}
+	locked, err := fileLock.TryRLock()
+	if err != nil {
+		return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
+	}
+	defer fileLock.Unlock()
+
+	if !locked {
+		return list.Model{}, locks.ErrIsLocked
+	}
+
+	recordReader, err := record.Read()
+	if err != nil {
+		return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
 	}
 	defer record.CloseFile()
-
-	recordReader, err := record.ReadFile()
-	if err != nil {
-		return list.Model{}, fmt.Errorf("readLogItems(%s): %w", group, err)
-	}
 	defer recordReader.Close()
 
 	scanner := bufio.NewScanner(recordReader)
@@ -114,13 +129,13 @@ func readLogItems(group string, logIdx int) (list.Model, error) {
 		recordHash := recordFields[0]
 		recordTimestamp, err := time.Parse(time.RFC3339, recordFields[1])
 		if err != nil {
-			return list.Model{}, fmt.Errorf("readLogItems(%s): %w", group, err)
+			return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
 		}
 		items = append(items, logItem{hash: recordHash, timestamp: recordTimestamp})
 	}
 
 	if err := scanner.Err(); err != nil {
-		return list.Model{}, fmt.Errorf("readLogItems(%s): %w", group, err)
+		return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
 	}
 
 	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil
