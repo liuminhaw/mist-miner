@@ -5,9 +5,9 @@ package mmlog
 
 import (
 	"fmt"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/liuminhaw/mist-miner/cmd/mmerr"
 	"github.com/liuminhaw/mist-miner/tui"
 
 	"github.com/spf13/cobra"
@@ -15,23 +15,29 @@ import (
 
 // logCmd represents the log command
 var LogCmd = &cobra.Command{
-	Use:   "log <group>",
-	Short: "Show mining result log of a group",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:          "log <group>",
+	Short:        "Show mining result log of a group",
+	Long:         ``,
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return mmerr.NewArgsError(
+				mmerr.LogCmdType,
+				fmt.Sprintf("accepts 1 args, received %d", len(args)),
+			)
+		}
 		group := args[0]
 
 		model, err := tui.InitLogModel(group, 0)
 		if err != nil {
-			fmt.Println("Error initializing log model:", err)
-			os.Exit(1)
+			return fmt.Errorf("log sub-command failed: %w", err)
 		}
 
 		if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
-			fmt.Println("Error running log command:", err)
-			os.Exit(1)
+			return fmt.Errorf("log sub-command failed: %w", err)
 		}
+
+		return nil
 	},
 }
 

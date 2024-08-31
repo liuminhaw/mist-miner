@@ -5,28 +5,35 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/liuminhaw/mist-miner/cmd/mmerr"
 	"github.com/liuminhaw/mist-miner/shelf"
 	"github.com/spf13/cobra"
 )
 
 // catFileCmd represents the catFile command
 var catFileCmd = &cobra.Command{
-	Use:   "cat-file <group> <hash>",
-	Short: "Display the content of given hash object",
-	Long:  ``,
-	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:          "cat-file <group> <hash>",
+	Short:        "Display the content of given hash object",
+	Long:         ``,
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 2 {
+			return mmerr.NewArgsError(
+				mmerr.CatFileCmdType,
+				fmt.Sprintf("accepts 2 args, received %d", len(args)),
+			)
+		}
 		group := args[0]
 		hash := args[1]
 
 		content, err := shelf.ObjectRead(group, hash)
 		if err != nil {
-			fmt.Println("Error reading object content:", err)
-			os.Exit(1)
+			return fmt.Errorf("cat-file sub-command failed: %w", err)
 		}
 		fmt.Println(content)
+
+		return nil
 	},
 }
 

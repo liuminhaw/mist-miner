@@ -5,30 +5,37 @@ package mmlog
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/liuminhaw/mist-miner/cmd/mmerr"
 	"github.com/liuminhaw/mist-miner/shelf"
 	"github.com/spf13/cobra"
 )
 
 // reloadCmd represents the reload command
-var reloadCmd = &cobra.Command{
-	Use:   "reload <group>",
-	Short: "Reload history log of a group and recreate reference logger files",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+var ReloadCmd = &cobra.Command{
+	Use:          "reload <group>",
+	Short:        "Reload history log of a group and recreate reference logger files",
+	Long:         ``,
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return mmerr.NewArgsError(
+				mmerr.LogReloadCmdType,
+				fmt.Sprintf("accepts 1 args, received %d", len(args)),
+			)
+		}
 		group := args[0]
 
 		if err := shelf.GenerateHistoryRecords(group, shelf.SHELF_HISTORY_LOGS_PER_PAGE); err != nil {
-			fmt.Println("Error generating history records:", err)
-			os.Exit(1)
+			return fmt.Errorf("log reload sub-command failed: %w", err)
 		}
+
+		return nil
 	},
 }
 
 func init() {
-	LogCmd.AddCommand(reloadCmd)
+	LogCmd.AddCommand(ReloadCmd)
 
 	// Here you will define your flags and configuration settings.
 

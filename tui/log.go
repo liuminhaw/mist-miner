@@ -102,7 +102,7 @@ func readLogItems(group string, logIdx int) (list.Model, error) {
 		return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
 	}
 
-	fileLock, err := locks.NewLock(locks.HISTORY_LOCKFILE)
+	fileLock, err := locks.NewLock(group, locks.HISTORY_LOCKFILE)
 	if err != nil {
 		return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
 	}

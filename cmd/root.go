@@ -28,6 +28,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/liuminhaw/mist-miner/cmd/mmerr"
 	"github.com/liuminhaw/mist-miner/cmd/mmlog"
 )
 
@@ -53,6 +54,21 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
+		switch v := err.(type) {
+		case mmerr.ArgsError:
+			switch v.CmdType {
+			case mmerr.MineCmdType:
+				mineCmd.Usage()
+			case mmerr.CatFileCmdType:
+				catFileCmd.Usage()
+			case mmerr.LogCmdType:
+				mmlog.LogCmd.Usage()
+			case mmerr.LogReloadCmdType:
+				mmlog.ReloadCmd.Usage()
+			}
+		default:
+			fmt.Printf("Failed to execute command: %+v\n", err)
+		}
 		os.Exit(1)
 	}
 }

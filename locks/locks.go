@@ -14,8 +14,13 @@ type Lock struct {
 	Path  string
 }
 
-func NewLock(filename string) (Lock, error) {
-	filepath, err := lockPath(filename)
+// NewLock creates a new Lock object with the given group and filename.
+// the lock file will be created in the appropriate directory based on the OS.
+// Example of lock file path will be like: OS_DIR_PATH/GROUP/FILENAME
+// If group is empty, the lock file will be created in the root directory.
+// Example of lock file path will be like: OS_DIR_PATH/FILENAME
+func NewLock(group, filename string) (Lock, error) {
+	filepath, err := lockPath(group, filename)
 	if err != nil {
 		return Lock{}, fmt.Errorf("NewLock(%s): %w", filename, err)
 	}
@@ -41,18 +46,22 @@ func (l *Lock) Unlock() error {
 }
 
 // lockPath returns the full path of a lock file based on the OS and given filename.
-func lockPath(filename string) (string, error) {
+func lockPath(group, filename string) (string, error) {
 	osType := runtime.GOOS
 
 	var path string
 	switch osType {
 	case "linux":
-		path = filepath.Join(LINUX_DIR_PATH, filename)
+		if group == "" {
+			path = filepath.Join(LINUX_DIR_PATH, filename)
+		} else {
+			path = filepath.Join(LINUX_DIR_PATH, group, filename)
+		}
 	default:
-		return "", fmt.Errorf("FilePath(%s): unsupported OS: %s", filename, osType)
+		return "", fmt.Errorf("lockPath(%s, %s): unsupported OS: %s", group, filename, osType)
 	}
 
-	os.Mkdir(filepath.Dir(path), os.ModePerm)
+	os.MkdirAll(filepath.Dir(path), os.ModePerm)
 
 	return path, nil
 }

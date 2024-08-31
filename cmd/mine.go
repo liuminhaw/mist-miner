@@ -12,6 +12,8 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/liuminhaw/mist-miner/cmd/mmerr"
+	"github.com/liuminhaw/mist-miner/locks"
 	"github.com/liuminhaw/mist-miner/shared"
 	"github.com/liuminhaw/mist-miner/shelf"
 	"github.com/spf13/cobra"
@@ -19,10 +21,18 @@ import (
 
 // mineCmd represents the mine command
 var mineCmd = &cobra.Command{
-	Use:   "mine",
-	Short: "Mine for cloud services resources",
-	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:          "mine",
+	Short:        "Mine for cloud services resources",
+	Long:         ``,
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return mmerr.NewArgsError(
+				mmerr.MineCmdType,
+				fmt.Sprintf("accepts no args, received %d", len(args)),
+			)
+		}
+
 		// Set logger
 		// Don't want to see the plugin logs.
 		log.SetOutput(io.Discard)
@@ -35,8 +45,22 @@ var mineCmd = &cobra.Command{
 		// Read the config file
 		hclConf, err := shared.ReadConfig(configFile)
 		if err != nil {
-			fmt.Printf("Failed to read config file: %+v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to mine: %w", err)
+		}
+
+		// Create objects lock
+		objFileLock, err := locks.NewLock("", locks.OBJECTS_LOCKFILE)
+		if err != nil {
+			return fmt.Errorf("failed to mine: %w", err)
+		}
+		locked, err := objFileLock.TryLock()
+		if err != nil {
+			return fmt.Errorf("failed to mine: %w", err)
+		}
+		defer objFileLock.Unlock()
+
+		if !locked {
+			return fmt.Errorf("failed to mine: %w", locks.ErrIsLocked)
 		}
 
 		// Run plugins
@@ -51,16 +75,14 @@ var mineCmd = &cobra.Command{
 				logger,
 			)
 			if err != nil {
-				fmt.Printf("Error running plugin: %+v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to mine: %w", err)
 			}
 		}
 
 		for group, label := range gLabels {
 			fmt.Printf("Group: %s\n", group)
 			if err := label.Update(); err != nil {
-				fmt.Printf("Error updating label mark: %+v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to mine: %w", err)
 			}
 
 			fmt.Printf("Hash: %s\n", label.Hash)
@@ -71,12 +93,11 @@ var mineCmd = &cobra.Command{
 
 			// Update history logs record
 			if err := shelf.GenerateHistoryRecords(group, shelf.SHELF_HISTORY_LOGS_PER_PAGE); err != nil {
-				fmt.Printf("Error generating history records: %s\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to mine: %w", err)
 			}
 		}
 
-		os.Exit(0)
+		return nil
 	},
 }
 
@@ -110,12 +131,6 @@ type pluginModule struct {
 type groupLabels map[string]shelf.LabelMark
 
 func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
-	// Setup logger
-	// logger := hclog.New(&hclog.LoggerOptions{
-	// 	Level:      hclog.Debug,
-	// 	Output:     os.Stderr,
-	// 	JSONFormat: true,
-	// })
 	pluginsBinDir, err := pluginsBinDirAbs()
 	if err != nil {
 		return err
@@ -124,10 +139,8 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	fmt.Printf("Binary Path: %s\n", binaryPath)
 
 	client := plugin.NewClient(&plugin.ClientConfig{
-		HandshakeConfig: shared.Handshake,
-		Plugins:         shared.PluginMap,
-		// Cmd:              exec.Command("sh", "-c", os.Getenv("PLUGIN_BINARY")),
-		// Cmd:              exec.Command(os.Getenv("PLUGIN_BINARY")),
+		HandshakeConfig:  shared.Handshake,
+		Plugins:          shared.PluginMap,
 		Cmd:              exec.Command(binaryPath),
 		Logger:           logger,
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
@@ -216,21 +229,6 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	// Update labelMark to the groupLabels
 	labelMark.AddMapping(pMod.name, labelMap.Hash)
 	(*gLabel)[pMod.group] = *labelMark
-
-	// err = labelMark.Update()
-	// if err != nil {
-	// 	return err
-	// }
-
-	// for _, lm := range labelMap.Maps {
-	// 	fmt.Printf("Hash: %s, Identifier: %s\n", lm.Hash, lm.Identifier)
-	// }
-
-	// b, err := json.Marshal(resources)
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Printf("Resources: %s\n", string(b))
 
 	return nil
 }

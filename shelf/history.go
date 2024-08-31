@@ -104,16 +104,26 @@ func GenerateHistoryRecords(group string, recordsPerPage int) error {
 		return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
 	}
 
-	// Use flock to prevent other processes from writing to the file
-	fileLock, err := locks.NewLock(locks.HISTORY_LOCKFILE)
+	// Use flock to prevent other processes from writing to the files
+	objFileLock, err := locks.NewLock("", locks.OBJECTS_LOCKFILE)
 	if err != nil {
 		return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
 	}
-	locked, err := fileLock.TryLock()
+	locked, err := objFileLock.TryRLock()
 	if err != nil {
 		return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
 	}
-	defer fileLock.Unlock()
+	defer objFileLock.Unlock()
+
+	histFileLock, err := locks.NewLock(group, locks.HISTORY_LOCKFILE)
+	if err != nil {
+		return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
+	}
+	locked, err = histFileLock.TryLock()
+	if err != nil {
+		return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
+	}
+	defer histFileLock.Unlock()
 
 	if !locked {
 		return locks.ErrIsLocked

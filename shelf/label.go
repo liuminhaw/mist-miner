@@ -193,7 +193,7 @@ func (m *RefMark) getReference() error {
 		return fmt.Errorf("getReference(): %w", err)
 	}
 
-	fileLock, err := locks.NewLock(locks.REF_MARK_LOCKFILE)
+	fileLock, err := locks.NewLock(m.Group, locks.REF_MARK_LOCKFILE)
 	if err != nil {
 		return fmt.Errorf("getReference(): %w", err)
 	}
