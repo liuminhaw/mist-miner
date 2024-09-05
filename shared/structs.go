@@ -23,19 +23,19 @@ type MinerConfig struct {
 }
 
 type MinerPropertyLabel struct {
-	Name   string
-	Unique bool
+	Name   string `json:"name"`
+	Unique bool   `json:"unique"`
 }
 
 type MinerPropertyContent struct {
-	Format string
-	Value  string
+	Format string `json:"format"`
+	Value  string `json:"value"`
 }
 
 type MinerProperty struct {
-	Type    string
-	Label   MinerPropertyLabel
-	Content MinerPropertyContent
+	Type    string               `json:"type"`
+	Label   MinerPropertyLabel   `json:"label"`
+	Content MinerPropertyContent `json:"content"`
 }
 
 // FormatContentValue set input data to desired property content value based on the content format.
@@ -61,10 +61,18 @@ func (m *MinerProperty) FormatContentValue(data any) error {
 	return nil
 }
 
+type MinerDiary struct {
+	Prev string `json:"prev"`
+	Curr string `json:"curr"`
+	Next string `json:"next"`
+}
+
 type MinerResource struct {
-	Identifier string
-	Alias      string
-	Properties []MinerProperty
+	Identifier string          `json:"identifier"`
+	Alias      string          `json:"alias"`
+	LogType    string          `json:"logType"`
+	Properties []MinerProperty `json:"properties"`
+	Diaries    MinerDiary      `json:"diaries"`
 }
 
 func (m *MinerResource) Sort() {
@@ -82,14 +90,14 @@ func (m *MinerResource) Sort() {
 func (m *MinerResource) RenderMarkdown() (string, error) {
 	var sb strings.Builder
 
-    if _, err := sb.WriteString(fmt.Sprintf("# Identifier\n**%s**\n\n", m.Identifier)); err != nil {
+	if _, err := sb.WriteString(fmt.Sprintf("# Identifier\n**%s**\n\n", m.Identifier)); err != nil {
 		return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
-    }
-    if m.Alias != "" {
-        if _, err := sb.WriteString(fmt.Sprintf("## Alias\n%s\n\n", m.Alias)); err != nil {
-            return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
-        }
-    }
+	}
+	if m.Alias != "" {
+		if _, err := sb.WriteString(fmt.Sprintf("## Alias\n%s\n\n", m.Alias)); err != nil {
+			return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
+		}
+	}
 
 	for i, prop := range m.Properties {
 		if i == 0 {
@@ -101,41 +109,41 @@ func (m *MinerResource) RenderMarkdown() (string, error) {
 		if _, err := sb.WriteString(fmt.Sprintf("### %s\n", prop.Type)); err != nil {
 			return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
 		}
-        if _, err := sb.WriteString(fmt.Sprintf("- **Label:** %s\n", prop.Label.Name)); err != nil {
+		if _, err := sb.WriteString(fmt.Sprintf("- **Label:** %s\n", prop.Label.Name)); err != nil {
 			return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
 		}
-        if _, err := sb.WriteString("- **Content:**\n"); err != nil {
-            return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
-        }
+		if _, err := sb.WriteString("- **Content:**\n"); err != nil {
+			return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
+		}
 		if prop.Content.Format == FormatJson {
 			prettyJson := bytes.Buffer{}
 			if err := json.Indent(&prettyJson, []byte(prop.Content.Value), "", "  "); err != nil {
 				return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
 			}
-            input := indentString(prettyJson.String(), "  ")
-            if _, err := sb.WriteString(fmt.Sprintf("  ```json\n%s\n  ```\n", input)); err != nil {
-                return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
-            }
+			input := indentString(prettyJson.String(), "  ")
+			if _, err := sb.WriteString(fmt.Sprintf("  ```json\n%s\n  ```\n", input)); err != nil {
+				return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
+			}
 		} else if prop.Content.Format == FormatText {
-            input := indentString(prop.Content.Value, "  ")
-            if _, err := sb.WriteString(fmt.Sprintf("  ```\n%s\n  ```\n", input)); err != nil {
-                return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
-            }
+			input := indentString(prop.Content.Value, "  ")
+			if _, err := sb.WriteString(fmt.Sprintf("  ```\n%s\n  ```\n", input)); err != nil {
+				return "", fmt.Errorf("MinerResource RenderMarkdown(): %w", err)
+			}
 		}
 	}
 
-    return sb.String(), nil
+	return sb.String(), nil
 }
 
 func indentString(input string, indent string) string {
 	// Split the input string by newline
 	lines := strings.Split(input, "\n")
-	
+
 	// Prepend each line with the indent string
 	for i, line := range lines {
 		lines[i] = indent + line
 	}
-	
+
 	// Join the lines back together with newline characters
 	return strings.Join(lines, "\n")
 }
