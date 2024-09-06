@@ -5,6 +5,7 @@ const (
 	CatFileCmdType   = "cat-file"
 	LogCmdType       = "log"
 	LogReloadCmdType = "log reload"
+	DiaryCmdType     = "diary"
 )
 
 type ArgsError struct {

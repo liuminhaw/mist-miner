@@ -62,9 +62,11 @@ func (m *MinerProperty) FormatContentValue(data any) error {
 }
 
 type MinerDiary struct {
-	Prev string `json:"prev"`
-	Curr string `json:"curr"`
-	Next string `json:"next"`
+	Hash string `json:"hash"`
+	Logs struct {
+		Prev string `json:"prev"`
+		Curr string `json:"curr"`
+	} `json:"logs"`
 }
 
 type MinerResource struct {

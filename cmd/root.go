@@ -28,6 +28,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/liuminhaw/mist-miner/cmd/mmdiary"
 	"github.com/liuminhaw/mist-miner/cmd/mmerr"
 	"github.com/liuminhaw/mist-miner/cmd/mmlog"
 )
@@ -65,6 +66,8 @@ func Execute() {
 				mmlog.LogCmd.Usage()
 			case mmerr.LogReloadCmdType:
 				mmlog.ReloadCmd.Usage()
+			case mmerr.DiaryCmdType:
+				mmdiary.DiaryCmd.Usage()
 			}
 		default:
 			fmt.Printf("Failed to execute command: %+v\n", err)
@@ -75,6 +78,7 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(mmlog.LogCmd)
+	rootCmd.AddCommand(mmdiary.DiaryCmd)
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
