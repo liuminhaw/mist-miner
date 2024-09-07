@@ -174,30 +174,35 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	for _, resource := range resources {
 		resource.Sort()
 
-		stuff, err := shelf.NewStuff(pMod.group, resource)
+		stuffResource, err := shelf.NewStuff(pMod.group, &resource)
 		if err != nil {
 			return err
 		}
-
-		identifier, err := stuff.ResourceIdentifier()
-		if err != nil {
+		if err := stuffResource.Write(); err != nil {
 			return err
 		}
 
-		alias, err := stuff.ResourceAlias()
+		// TODO: diary resource fetch implementation
+		tempDiary := shared.MinerDiary{}
+		diaryResource, err := shelf.NewStuff(pMod.group, &tempDiary)
 		if err != nil {
+			return err
+		}
+		if err := diaryResource.Write(); err != nil {
+			return err
+		}
+
+		outline := shelf.NewStuffOutline(pMod.group, stuffResource.Hash, diaryResource.Hash)
+		if err := outline.Write(); err != nil {
 			return err
 		}
 
 		labelMap.Maps = append(labelMap.Maps, shelf.IdentifierHashMap{
-			Identifier: identifier,
-			Alias:      alias,
-			Hash:       stuff.Hash,
+			Identifier: resource.Identifier,
+			Alias:      resource.Alias,
+			Hash:       outline.Hash,
 		})
 
-		if err := stuff.Write(); err != nil {
-			return err
-		}
 	}
 
 	// Prevent from writing empty label map
@@ -206,6 +211,7 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 		return nil
 	}
 
+	// TODO: Sort should be done within write to avoid forgetting
 	labelMap.Sort()
 	if err := labelMap.Write(); err != nil {
 		return err

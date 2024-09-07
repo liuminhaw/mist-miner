@@ -19,7 +19,8 @@ import (
 type IdentifierHashMap struct {
 	Identifier string
 	Alias      string
-	Hash       string
+	// Hash of pointed stuff outline
+	Hash string
 }
 
 type IdentifierHashMaps struct {

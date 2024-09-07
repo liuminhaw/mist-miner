@@ -6,21 +6,96 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-
-	"github.com/liuminhaw/mist-miner/shared"
+	"strings"
 )
+
+func ReadStuffOutline(group, hash string) (*StuffOutline, error) {
+	r, err := objectReader(group, hash)
+	if err != nil {
+		return nil, fmt.Errorf("read stuff outline: %w", err)
+	}
+
+	content, err := io.ReadAll(r)
+	fields := strings.Fields(string(content))
+	if len(fields) != 2 {
+		return nil, fmt.Errorf("read stuff outline: invalid content: %s", content)
+	}
+
+	return &StuffOutline{
+		Hash:         hash,
+		Group:        group,
+		ResourceHash: fields[0],
+		DiaryHash:    fields[1],
+	}, nil
+}
+
+type StuffOutline struct {
+	Hash         string
+	Group        string
+	ResourceHash string
+	DiaryHash    string
+	Content      []byte
+}
+
+func NewStuffOutline(group, resourceHash, diaryHash string) StuffOutline {
+	content := fmt.Sprintf("%s %s", resourceHash, diaryHash)
+
+	h := sha256.New()
+	h.Write([]byte(content))
+
+	return StuffOutline{
+		Hash:         fmt.Sprintf("%x", h.Sum(nil)),
+		Group:        group,
+		ResourceHash: resourceHash,
+		DiaryHash:    diaryHash,
+		Content:      []byte(content),
+	}
+}
+
+func (s *StuffOutline) Write() error {
+	outlineFile, err := ObjectFile(s.Group, s.Hash)
+	if err != nil {
+		return fmt.Errorf("stuff outline write: %w", err)
+	}
+	if _, err := os.Stat(outlineFile); !errors.Is(err, os.ErrNotExist) {
+		fmt.Printf("Stuff outline file already exists: %s\n", outlineFile)
+		return nil
+	}
+
+	err = os.MkdirAll(filepath.Dir(outlineFile), os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("stuff outline write: mkdir: %w", err)
+	}
+
+	f, err := os.Create(outlineFile)
+	if err != nil {
+		return fmt.Errorf("stuff outline write: create file: %w", err)
+	}
+	defer f.Close()
+
+	w := zlib.NewWriter(f)
+	_, err = w.Write(s.Content)
+	if err != nil {
+		return fmt.Errorf("stuff outline write: write file: %w", err)
+	}
+	defer w.Close()
+
+	fmt.Printf("Stuff outline file written: %s\n", outlineFile)
+	return nil
+}
 
 type Stuff struct {
 	Hash     string
-	Identity string
+	Group    string
 	Resource []byte
 }
 
 // NewStuff creates a new Stuff from a plugin name and a MinerResource
-func NewStuff(plugId string, resource shared.MinerResource) (*Stuff, error) {
-	b, err := json.Marshal(resource)
+func NewStuff(group string, a any) (*Stuff, error) {
+	b, err := json.Marshal(a)
 	if err != nil {
 		return nil, fmt.Errorf("new blob: marshal: %w", err)
 	}
@@ -30,14 +105,14 @@ func NewStuff(plugId string, resource shared.MinerResource) (*Stuff, error) {
 
 	return &Stuff{
 		Hash:     fmt.Sprintf("%x", h.Sum(nil)),
-		Identity: plugId,
+		Group:    group,
 		Resource: b,
 	}, nil
 }
 
 // Write writes the Stuff resource content to a file
 func (s *Stuff) Write() error {
-	stuffFile, err := ObjectFile(s.Identity, s.Hash)
+	stuffFile, err := ObjectFile(s.Group, s.Hash)
 	if err != nil {
 		return fmt.Errorf("stuff write: %w", err)
 	}
@@ -68,26 +143,3 @@ func (s *Stuff) Write() error {
 	return nil
 }
 
-// ResourceIdentifier extract and return Identifier value from stored resource
-func (s *Stuff) ResourceIdentifier() (string, error) {
-	resource := shared.MinerResource{}
-
-	err := json.Unmarshal(s.Resource, &resource)
-	if err != nil {
-		return "", fmt.Errorf("resource identifier: unmarshal: %w", err)
-	}
-
-	return resource.Identifier, nil
-}
-
-// ResourceAlias extract and return Alias value from stored resource
-func (s *Stuff) ResourceAlias() (string, error) {
-	resource := shared.MinerResource{}
-
-	err := json.Unmarshal(s.Resource, &resource)
-	if err != nil {
-		return "", fmt.Errorf("resource alias: unmarshal: %w", err)
-	}
-
-	return resource.Alias, nil
-}

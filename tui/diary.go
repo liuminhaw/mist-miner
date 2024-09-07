@@ -122,9 +122,14 @@ func readDiaryItems(group, plugin string) (list.Model, error) {
 		}
 
 		for _, idHashMap := range idHashMaps.Maps {
+			outline, err := shelf.ReadStuffOutline(group, idHashMap.Hash)
+			if err != nil {
+				return list.Model{}, fmt.Errorf("readDiaryItems(%s, %s): %w", group, plugin, err)
+			}
+
 			items = append(items, diaryItem{
 				identifier:     idHashMap.Identifier,
-				identifierHash: idHashMap.Hash,
+				identifierHash: outline.ResourceHash,
 				alias:          idHashMap.Alias,
 			})
 

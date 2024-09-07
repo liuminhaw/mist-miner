@@ -100,7 +100,15 @@ func readResourceItems(group, hash string) (list.Model, error) {
 
 	items := []list.Item{}
 	for _, m := range idHashMaps.Maps {
-		items = append(items, resourceItem{alias: m.Alias, hash: m.Hash, identifier: m.Identifier})
+		outline, err := shelf.ReadStuffOutline(group, m.Hash)
+		if err != nil {
+			return list.Model{}, fmt.Errorf("readResourceItems(%s, %s): %w", group, hash, err)
+		}
+
+		items = append(
+			items,
+			resourceItem{alias: m.Alias, hash: outline.ResourceHash, identifier: m.Identifier},
+		)
 	}
 
 	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil

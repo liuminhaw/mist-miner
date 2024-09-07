@@ -61,6 +61,11 @@ func (m *MinerProperty) FormatContentValue(data any) error {
 	return nil
 }
 
+type MinerOutline struct {
+	Resource MinerResource `json:"resource"`
+	Diary    MinerDiary    `json:"diary"`
+}
+
 type MinerDiary struct {
 	Hash string `json:"hash"`
 	Logs struct {
@@ -74,7 +79,6 @@ type MinerResource struct {
 	Alias      string          `json:"alias"`
 	LogType    string          `json:"logType"`
 	Properties []MinerProperty `json:"properties"`
-	Diaries    MinerDiary      `json:"diaries"`
 }
 
 func (m *MinerResource) Sort() {
