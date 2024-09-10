@@ -15,16 +15,26 @@ import (
 // logItem is a list item for showing log entries in list view
 type logItem struct {
 	hash      string
+	logType   string
 	timestamp time.Time
 }
 
 func (i logItem) Title() string { return i.hash }
 func (i logItem) Description() string {
-	return fmt.Sprintf("timestamp: %s", i.timestamp.Format("2006-01-02 15:04:05 -0700"))
+	return fmt.Sprintf(
+		"type: %s, timestamp: %s",
+		i.logType,
+		i.timestamp.Format("2006-01-02 15:04:05 -0700"),
+	)
 }
 
 func (i logItem) FilterValue() string {
-	return fmt.Sprintf("%s %s", i.hash, i.timestamp.Format("2006-01-02 15:04:05 -0700"))
+	return fmt.Sprintf(
+		"%s %s %s",
+		i.hash,
+		i.logType,
+		i.timestamp.Format("2006-01-02 15:04:05 -0700"),
+	)
 }
 
 type logModel struct {
@@ -126,12 +136,23 @@ func readLogItems(group string, logIdx int) (list.Model, error) {
 	scanner := bufio.NewScanner(recordReader)
 	for scanner.Scan() {
 		recordFields := strings.Split(scanner.Text(), " ")
+		if len(recordFields) != 3 {
+			return list.Model{}, fmt.Errorf(
+				"readLogItems(%s, %d): invalid record format",
+				group,
+				logIdx,
+			)
+		}
 		recordHash := recordFields[0]
-		recordTimestamp, err := time.Parse(time.RFC3339, recordFields[1])
+		recordType := recordFields[1]
+		recordTimestamp, err := time.Parse(time.RFC3339, recordFields[2])
 		if err != nil {
 			return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
 		}
-		items = append(items, logItem{hash: recordHash, timestamp: recordTimestamp})
+		items = append(
+			items,
+			logItem{hash: recordHash, logType: recordType, timestamp: recordTimestamp},
+		)
 	}
 
 	if err := scanner.Err(); err != nil {

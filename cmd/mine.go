@@ -223,7 +223,7 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 	var labelMark *shelf.LabelMark
 	if _, ok := (*gLabel)[pMod.group]; !ok {
 		(*gLabel)[pMod.group] = shelf.LabelMark{}
-		labelMark, err = shelf.NewMark(pMod.name, pMod.group, labelMap.Hash)
+		labelMark, err = shelf.NewMark(pMod.group, "mine")
 		if err != nil {
 			return err
 		}

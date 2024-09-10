@@ -233,6 +233,7 @@ type LabelMark struct {
 	// Module       string
 	Hash      string
 	TimeStamp time.Time
+	LogType   string
 	Parent    string
 	Mappings  []MarkMapping
 	Group     string
@@ -241,9 +242,10 @@ type LabelMark struct {
 }
 
 // NewMark creates a new label mark with the given plugin name, plugin id (group) and label map hash.
-func NewMark(plugName, group, gmapHash string) (*LabelMark, error) {
+func NewMark(group, logType string) (*LabelMark, error) {
 	mark := LabelMark{
 		Group:     group,
+		LogType:   logType,
 		TimeStamp: time.Now(),
 		Mappings:  []MarkMapping{},
 	}
@@ -281,9 +283,25 @@ func ReadMark(group, mapHash string) (*LabelMark, error) {
 			return nil, fmt.Errorf("read label mark: parse time: %w", err)
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("read label mark timestamp: %w", err)
+	}
+	// Scan the log type.
+	if ok := scanner.Scan(); ok {
+		mark.LogType = scanner.Text()
+		if mark.LogType != "mine" && mark.LogType != "diary" {
+			return nil, fmt.Errorf("read label mark: invalid log type: %s", mark.LogType)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("read label mark log type: %w", err)
+	}
 	// Scan the parent hash.
 	if ok := scanner.Scan(); ok {
 		mark.Parent = scanner.Text()
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("read label mark parent hash: %w", err)
 	}
 	// Scan the mappings.
 	for scanner.Scan() {
@@ -296,6 +314,9 @@ func ReadMark(group, mapHash string) (*LabelMark, error) {
 			Hash:   fields[0],
 			Module: fields[1],
 		})
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("read label mark: %w", err)
 	}
 
 	return &mark, nil
@@ -377,6 +398,7 @@ func (lm *LabelMark) calcHash() error {
 	// fmt.Printf("Parent: %s\n", parent)
 	// fmt.Fprintf(&lm.buffer, "%v\n", lm.TimeStamp)
 	fmt.Fprintf(&lm.buffer, "%v\n", lm.TimeStamp.Format(time.RFC3339))
+	fmt.Fprintf(&lm.buffer, "%s\n", lm.LogType)
 	fmt.Fprintf(&lm.buffer, "%s\n", parent)
 
 	lm.sort()

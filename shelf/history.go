@@ -152,7 +152,7 @@ filesLoop:
 		defer w.Close()
 
 		if record.Index != 0 {
-			prev := fmt.Sprintf("%s%s %v\n", SHELF_HISTORY_LOGS_PREV, prevMark.Hash[:8], prevMark.TimeStamp.Format(time.RFC3339))
+			prev := fmt.Sprintf("%s%s %s %v\n", SHELF_HISTORY_LOGS_PREV, prevMark.Hash[:8], prevMark.LogType, prevMark.TimeStamp.Format(time.RFC3339))
 			_, err := w.Write([]byte(prev))
 			if err != nil {
 				return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
@@ -164,7 +164,7 @@ filesLoop:
 				return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
 			}
 
-			_, err = w.Write([]byte(fmt.Sprintf("%s %v\n", mark.Hash, mark.TimeStamp.Format(time.RFC3339))))
+			_, err = w.Write([]byte(fmt.Sprintf("%s %s %v\n", mark.Hash, mark.LogType, mark.TimeStamp.Format(time.RFC3339))))
 			if err != nil {
 				return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
 			}
@@ -178,7 +178,7 @@ filesLoop:
 				if err != nil {
 					return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
 				}
-				next := fmt.Sprintf("%s%s %v\n", tmpMark.Hash[:8], SHELF_HISTORY_LOGS_NEXT, tmpMark.TimeStamp.Format(time.RFC3339))
+				next := fmt.Sprintf("%s%s %s %v\n", tmpMark.Hash[:8], SHELF_HISTORY_LOGS_NEXT, tmpMark.LogType, tmpMark.TimeStamp.Format(time.RFC3339))
 				_, err = w.Write([]byte(next))
 				if err != nil {
 					return fmt.Errorf("GenerateHistoryRecords(%s): %w", group, err)
