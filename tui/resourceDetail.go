@@ -42,7 +42,7 @@ func InitResourceDetailModel(
 	group, hash string,
 	prev tea.Model,
 ) (tea.Model, error) {
-	content, err := shelf.ObjectRead(group, hash)
+	content, err := shelf.NewObjectRecord(group, hash).RecordRead()
 	if err != nil {
 		return nil, fmt.Errorf("InitResourceDetailModel(%s, %s): %w", group, hash, err)
 	}

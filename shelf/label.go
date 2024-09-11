@@ -40,7 +40,7 @@ func ReadIdentifierHashMaps(group, hash string) (*IdentifierHashMaps, error) {
 		Maps:  []IdentifierHashMap{},
 	}
 
-	r, err := objectReader(idHashMaps.Group, idHashMaps.Hash)
+	r, err := NewObjectRecord(idHashMaps.Group, idHashMaps.Hash).RecordReadCloser()
 	if err != nil {
 		return nil, fmt.Errorf("read identifier hash maps: %w", err)
 	}
@@ -86,7 +86,7 @@ func (lhm *IdentifierHashMaps) Write() error {
 		return fmt.Errorf("identifier hash maps write: calc hash: %w", err)
 	}
 
-	mapFile, err := ObjectFile(lhm.Group, lhm.Hash)
+	mapFile, err := NewObjectRecord(lhm.Group, lhm.Hash).RecordFile()
 	if err != nil {
 		return fmt.Errorf("identifier hash maps write: %w", err)
 	}
@@ -270,7 +270,7 @@ func ReadMark(group, mapHash string) (*LabelMark, error) {
 		Mappings: []MarkMapping{},
 	}
 
-	r, err := objectReader(mark.Group, mark.Hash)
+	r, err := NewObjectRecord(mark.Group, mark.Hash).RecordReadCloser()
 	if err != nil {
 		return nil, fmt.Errorf("read label mark: %w", err)
 	}
@@ -343,7 +343,7 @@ func (lm *LabelMark) Update() error {
 		return fmt.Errorf("label mark update: %w", err)
 	}
 
-	markFile, err := ObjectFile(lm.Group, lm.Hash)
+	markFile, err := NewObjectRecord(lm.Group, lm.Hash).RecordFile()
 	if err != nil {
 		return fmt.Errorf("label mark update: %w", err)
 	}

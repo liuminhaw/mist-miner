@@ -27,7 +27,7 @@ var catFileCmd = &cobra.Command{
 		group := args[0]
 		hash := args[1]
 
-		content, err := shelf.ObjectRead(group, hash)
+		content, err := shelf.NewObjectRecord(group, hash).RecordRead()
 		if err != nil {
 			return fmt.Errorf("cat-file sub-command failed: %w", err)
 		}

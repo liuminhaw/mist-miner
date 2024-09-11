@@ -13,7 +13,7 @@ import (
 )
 
 func ReadStuffOutline(group, hash string) (*StuffOutline, error) {
-	r, err := objectReader(group, hash)
+	r, err := NewObjectRecord(group, hash).RecordReadCloser()
 	if err != nil {
 		return nil, fmt.Errorf("read stuff outline: %w", err)
 	}
@@ -56,7 +56,7 @@ func NewStuffOutline(group, resourceHash, diaryHash string) StuffOutline {
 }
 
 func (s *StuffOutline) Write() error {
-	outlineFile, err := ObjectFile(s.Group, s.Hash)
+	outlineFile, err := NewObjectRecord(s.Group, s.Hash).RecordFile()
 	if err != nil {
 		return fmt.Errorf("stuff outline write: %w", err)
 	}
@@ -112,7 +112,7 @@ func NewStuff(group string, a any) (*Stuff, error) {
 
 // Write writes the Stuff resource content to a file
 func (s *Stuff) Write() error {
-	stuffFile, err := ObjectFile(s.Group, s.Hash)
+	stuffFile, err := NewObjectRecord(s.Group, s.Hash).RecordFile()
 	if err != nil {
 		return fmt.Errorf("stuff write: %w", err)
 	}
@@ -142,4 +142,3 @@ func (s *Stuff) Write() error {
 	fmt.Printf("Stuff file written: %s\n", stuffFile)
 	return nil
 }
-
