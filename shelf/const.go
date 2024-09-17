@@ -7,15 +7,18 @@ import (
 )
 
 const (
-	SHELF_DIR = ".miner"
+	shelf_dir = ".miner"
 
-	SHELF_REF_DIR     = "refs"
-	shelf_object_dir  = "objects"
-	shelf_diary_dir   = "diaries"
-	SHELF_HISTORY_DIR = "history"
+	shelf_ref_dir             = "refs"
+	shelf_object_dir          = "objects"
+	shelf_diary_dir           = "diaries"
+	shelf_history_dir         = "history"
+	shelf_history_logger_dir  = "logger"
+	shelf_history_pointer_dir = "pointer"
 
-	SHELF_MARK_FILE    = "HEAD"
-	SHELF_HISTORY_FILE = "logger"
+	SHELF_MARK_FILE            = "HEAD"
+	SHELF_HISTORY_FILE         = "logger"
+	shelf_history_pointer_file = "next.map"
 
 	SHELF_HISTORY_LOGS_PREV = "<<<..."
 	SHELF_HISTORY_LOGS_NEXT = "...>>>"
@@ -31,5 +34,5 @@ func RefFile(group, name string) (string, error) {
 		return "", fmt.Errorf("RefFile(%s, %s): get executable: %w", group, name, err)
 	}
 
-	return filepath.Join(filepath.Dir(execPath), SHELF_DIR, group, SHELF_REF_DIR, name), nil
+	return filepath.Join(filepath.Dir(execPath), shelf_dir, group, shelf_ref_dir, name), nil
 }

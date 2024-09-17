@@ -87,10 +87,11 @@ func historyDir(group string) (string, error) {
 
 	return filepath.Join(
 		filepath.Dir(execPath),
-		SHELF_DIR,
+		shelf_dir,
 		group,
-		SHELF_REF_DIR,
-		SHELF_HISTORY_DIR,
+		shelf_ref_dir,
+		shelf_history_dir,
+		shelf_history_logger_dir,
 	), nil
 }
 
@@ -191,4 +192,109 @@ filesLoop:
 	}
 
 	return nil
+}
+
+// GenerateHistoryPointers generates history pointers files for the given group.
+// history pointer file is stored in the format of: <sha hash> <next log sha hash>
+// which is for getting the next history hash from the first column sha hash.
+func GenerateHistoryPointers(group string) error {
+	head, err := NewRefMark(SHELF_MARK_FILE, group)
+	if err != nil {
+		return fmt.Errorf("GenerateHistoryPointers(%s): %w", group, err)
+	}
+
+	currentSha := string(head.Reference)
+	for {
+		mark, err := ReadMark(group, currentSha)
+		if err != nil {
+			return fmt.Errorf("GenerateHistoryPointers(%s): %w", group, err)
+		}
+
+		parentSha := mark.Parent
+		if mark.Parent == "nil" {
+			break
+		}
+
+		// next.map format: <parent sha> <current sha>
+		if err := writeNextMap(group, parentSha, currentSha); err != nil {
+			return fmt.Errorf("GenerateHistoryPointers(%s): %w", group, err)
+		}
+		currentSha = parentSha
+	}
+
+	return nil
+}
+
+// writeNextMap writes the parent sha and current sha to the history pointer file
+// in the format of: <parent sha> <current sha>.
+func writeNextMap(group, parentSha, currentSha string) error {
+	file, err := pointerFile(group, parentSha)
+	if err != nil {
+		return fmt.Errorf("writeNextMap(%s, %s, %s): %w", group, parentSha, currentSha, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(file), os.ModePerm); err != nil {
+		return fmt.Errorf("writeNextMap(%s, %s, %s): %w", group, parentSha, currentSha, err)
+	}
+
+	// Read pointer file content
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf(
+			"writeNextMap(%s, %s, %s): %w", group, parentSha, currentSha, err,
+		)
+	}
+	defer f.Close()
+
+	var content []byte
+	if _, err := os.Stat(file); os.IsExist(err) {
+		r, err := zlib.NewReader(f)
+		if err != nil {
+			return fmt.Errorf(
+				"writeNextMap(%s, %s, %s): %w", group, parentSha, currentSha, err,
+			)
+		}
+		defer r.Close()
+
+		// Append new
+		content, err = io.ReadAll(r)
+		if err != nil {
+			return fmt.Errorf(
+				"writeNextMap(%s, %s, %s): read all: %w",
+				group,
+				parentSha,
+				currentSha,
+				err,
+			)
+		}
+	}
+	content = append(content, []byte(fmt.Sprintf("%s %s\n", parentSha, currentSha))...)
+
+	w := zlib.NewWriter(f)
+	_, err = w.Write(content)
+	if err != nil {
+		return fmt.Errorf("writeNextMap(%s, %s, %s): %w", group, parentSha, currentSha, err)
+	}
+	defer w.Close()
+
+	return nil
+}
+
+// pointerDir returns the directory path to store the history pointers for the given group and sha
+// using the first two characters of the sha as the subdirectory
+func pointerFile(group, sha string) (string, error) {
+	execPath, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("PointerDir(%s, %s): get executable: %w", group, sha, err)
+	}
+
+	return filepath.Join(
+		filepath.Dir(execPath),
+		shelf_dir,
+		group,
+		shelf_ref_dir,
+		shelf_history_dir,
+		shelf_history_pointer_dir,
+		sha[:2],
+		shelf_history_pointer_file,
+	), nil
 }

@@ -99,7 +99,7 @@ func (r ShelfRecord) recordDir() (string, error) {
 
 	return filepath.Join(
 		filepath.Dir(execPath),
-		SHELF_DIR,
+		shelf_dir,
 		r.Group,
 		r.Type,
 		r.Hash[:2],

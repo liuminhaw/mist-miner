@@ -14,7 +14,7 @@ import (
 // reloadCmd represents the reload command
 var ReloadCmd = &cobra.Command{
 	Use:          "reload <group>",
-	Short:        "Reload history log of a group and recreate reference logger files",
+	Short:        "Reload history log of a group to recreate reference logger files and pointer files",
 	Long:         ``,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -27,6 +27,10 @@ var ReloadCmd = &cobra.Command{
 		group := args[0]
 
 		if err := shelf.GenerateHistoryRecords(group, shelf.SHELF_HISTORY_LOGS_PER_PAGE); err != nil {
+			return fmt.Errorf("log reload sub-command failed: %w", err)
+		}
+
+		if err := shelf.GenerateHistoryPointers(group); err != nil {
 			return fmt.Errorf("log reload sub-command failed: %w", err)
 		}
 
