@@ -198,15 +198,13 @@ func (m *RefMark) getReference() error {
 	if err != nil {
 		return fmt.Errorf("getReference(): %w", err)
 	}
-	locked, err := fileLock.TryRLock()
-	if err != nil {
+	if err := fileLock.TryRLock(); err != nil {
+		if errors.Is(err, locks.ErrIsLocked) {
+			return err
+		}
 		return fmt.Errorf("getReference(): %w", err)
 	}
 	defer fileLock.Unlock()
-
-	if !locked {
-		return locks.ErrIsLocked
-	}
 
 	f, err := os.Open(file)
 	if err != nil {

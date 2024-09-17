@@ -2,9 +2,11 @@ package locks
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/gofrs/flock"
 )
@@ -31,13 +33,41 @@ func NewLock(group, filename string) (Lock, error) {
 }
 
 // TryLock acquires an exclusive lock on the file. Is a wrapper for flock.Lock().
-func (l *Lock) TryLock() (bool, error) {
-	return l.Flock.TryLock()
+func (l *Lock) TryLock() error {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	for i := 0; i < lock_retry_max_count; i++ {
+		locked, err := l.Flock.TryLock()
+		if err != nil {
+			return fmt.Errorf("lock.TryLock failed: %w", err)
+		}
+		if locked {
+			return nil
+		}
+
+		time.Sleep(time.Duration(r.Intn(lock_retry_max_interval)) * time.Millisecond)
+	}
+
+	return ErrIsLocked
 }
 
 // TryRLock acquires a shared lock on the file. Is a wrapper for flock.RLock().
-func (l *Lock) TryRLock() (bool, error) {
-	return l.Flock.TryRLock()
+func (l *Lock) TryRLock() error {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	for i := 0; i < lock_retry_max_count; i++ {
+		locked, err := l.Flock.TryRLock()
+		if err != nil {
+			return fmt.Errorf("lock.TryRLock failed: %w", err)
+		}
+		if locked {
+			return nil
+		}
+
+		time.Sleep(time.Duration(r.Intn(lock_retry_max_interval)) * time.Millisecond)
+	}
+
+	return ErrIsLocked
 }
 
 // Unlock releases the lock on the file. Is a wrapper for flock.Unlock().

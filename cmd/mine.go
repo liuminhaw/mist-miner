@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -53,14 +54,11 @@ var mineCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to mine: %w", err)
 		}
-		locked, err := objFileLock.TryLock()
-		if err != nil {
+		if err := objFileLock.TryLock(); err != nil {
+			if errors.Is(err, locks.ErrIsLocked) {
+				return err
+			}
 			return fmt.Errorf("failed to mine: %w", err)
-		}
-		defer objFileLock.Unlock()
-
-		if !locked {
-			return fmt.Errorf("failed to mine: %w", locks.ErrIsLocked)
 		}
 
 		// Run plugins
@@ -79,6 +77,7 @@ var mineCmd = &cobra.Command{
 			}
 		}
 
+		pointers := []shelf.HistoryPointer{}
 		for group, label := range gLabels {
 			fmt.Printf("Group: %s\n", group)
 			if err := label.Update(); err != nil {
@@ -91,8 +90,29 @@ var mineCmd = &cobra.Command{
 				fmt.Printf("Module: %s, Hash: %s\n", mapping.Module, mapping.Hash)
 			}
 
+			// Get history pointers data in each group for later records write
+			pointers = append(
+				pointers,
+				shelf.HistoryPointer{
+					Group:       group,
+					ParentHash:  label.Parent,
+					CurrentHash: label.Hash,
+				},
+			)
+		}
+		if err := objFileLock.Unlock(); err != nil {
+			return fmt.Errorf("failed to mine: %w", err)
+		}
+
+		for _, pointer := range pointers {
 			// Update history logs record
-			if err := shelf.GenerateHistoryRecords(group, shelf.SHELF_HISTORY_LOGS_PER_PAGE); err != nil {
+			if err := shelf.GenerateHistoryRecords(pointer.Group, shelf.SHELF_HISTORY_LOGS_PER_PAGE); err != nil {
+				return fmt.Errorf("failed to mine: %w", err)
+			}
+
+			// Update history logs pointer
+			// fmt.Printf("DEBUG: parent: %s, hash: %s\n", pointer.Parent, label.Hash)
+			if err := shelf.WriteNextMap(pointer); err != nil {
 				return fmt.Errorf("failed to mine: %w", err)
 			}
 		}

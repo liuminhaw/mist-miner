@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -116,15 +117,14 @@ func readLogItems(group string, logIdx int) (list.Model, error) {
 	if err != nil {
 		return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
 	}
-	locked, err := fileLock.TryRLock()
-	if err != nil {
+	if err := fileLock.TryRLock(); err != nil {
+		if errors.Is(err, locks.ErrIsLocked) {
+			return list.Model{}, err
+		}
 		return list.Model{}, fmt.Errorf("readLogItems(%s, %d): %w", group, logIdx, err)
 	}
-	defer fileLock.Unlock()
 
-	if !locked {
-		return list.Model{}, locks.ErrIsLocked
-	}
+	defer fileLock.Unlock()
 
 	recordReader, err := record.Read()
 	if err != nil {
