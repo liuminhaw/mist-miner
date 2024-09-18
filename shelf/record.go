@@ -49,6 +49,7 @@ func (sr ShelfRecord) RecordRead() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("RecordRead(): %w", err)
 	}
+	defer r.Close()
 
 	b, err := io.ReadAll(r)
 	if err != nil {

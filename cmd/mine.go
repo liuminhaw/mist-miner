@@ -93,11 +93,7 @@ var mineCmd = &cobra.Command{
 			// Get history pointers data in each group for later records write
 			pointers = append(
 				pointers,
-				shelf.HistoryPointer{
-					Group:       group,
-					ParentHash:  label.Parent,
-					CurrentHash: label.Hash,
-				},
+				shelf.NewHistoryPointer(group, label.Parent, label.Hash),
 			)
 		}
 		if err := objFileLock.Unlock(); err != nil {
@@ -112,7 +108,7 @@ var mineCmd = &cobra.Command{
 
 			// Update history logs pointer
 			// fmt.Printf("DEBUG: parent: %s, hash: %s\n", pointer.Parent, label.Hash)
-			if err := shelf.WriteNextMap(pointer); err != nil {
+			if err := pointer.WriteNextMap(); err != nil {
 				return fmt.Errorf("failed to mine: %w", err)
 			}
 		}

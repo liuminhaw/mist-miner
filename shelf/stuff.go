@@ -17,6 +17,7 @@ func ReadStuffOutline(group, hash string) (*StuffOutline, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read stuff outline: %w", err)
 	}
+	defer r.Close()
 
 	content, err := io.ReadAll(r)
 	fields := strings.Fields(string(content))

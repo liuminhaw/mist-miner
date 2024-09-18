@@ -195,12 +195,6 @@ filesLoop:
 	return nil
 }
 
-type HistoryPointer struct {
-	Group       string
-	ParentHash  string
-	CurrentHash string
-}
-
 // GenerateHistoryPointers generates history pointers files for the given group.
 // history pointer file is stored in the format of: <sha hash> <next log sha hash>
 // which is for getting the next history hash from the first column sha hash.
@@ -256,8 +250,8 @@ func GenerateHistoryPointers(group string) error {
 		}
 
 		// next.map format: <parent sha> <current sha>
-		pointer := HistoryPointer{Group: group, ParentHash: parentSha, CurrentHash: currentSha}
-		if err := WriteNextMap(pointer); err != nil {
+		pointer := NewHistoryPointer(group, parentSha, currentSha)
+		if err := pointer.WriteNextMap(); err != nil {
 			return fmt.Errorf("GenerateHistoryPointers(%s): %w", group, err)
 		}
 		currentSha = parentSha
@@ -266,11 +260,20 @@ func GenerateHistoryPointers(group string) error {
 	return nil
 }
 
+type HistoryPointer struct {
+	Group       string
+	ParentHash  string
+	CurrentHash string
+}
+
+func NewHistoryPointer(group, parentHash, currentHash string) HistoryPointer {
+	return HistoryPointer{Group: group, ParentHash: parentHash, CurrentHash: currentHash}
+}
+
 // WriteNextMap writes the parent sha and current sha to the history pointer file
 // in the format of: <parent sha> <current sha>.
-// func WriteNextMap(group, parentSha, currentSha string) error {
-func WriteNextMap(pointer HistoryPointer) error {
-	file, err := pointerFile(pointer.Group, pointer.ParentHash)
+func (hp HistoryPointer) WriteNextMap() error {
+	file, err := hp.filepath()
 	if err != nil {
 		return fmt.Errorf("writeNextMap: get pointer file: %w", err)
 	}
@@ -280,27 +283,14 @@ func WriteNextMap(pointer HistoryPointer) error {
 
 	var content []byte
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
-		f, err := os.Open(file)
-		if err != nil {
-			return fmt.Errorf("writeNextMap: open pointer file: %w", err)
-		}
-
-		r, err := zlib.NewReader(f)
-		if err != nil {
-			return fmt.Errorf("writeNextMap: zlib read: %w", err)
-		}
-		defer r.Close()
-
-		content, err = io.ReadAll(r)
+		content, err = hp.readFile()
 		if err != nil {
 			return fmt.Errorf("writeNextMap: read pointer content: %w", err)
 		}
-
-		f.Close()
 	}
 	content = append(
 		content,
-		[]byte(fmt.Sprintf("%s %s\n", pointer.ParentHash, pointer.CurrentHash))...)
+		[]byte(fmt.Sprintf("%s %s\n", hp.ParentHash, hp.CurrentHash))...)
 
 	f, err := os.Create(file)
 	if err != nil {
@@ -318,16 +308,43 @@ func WriteNextMap(pointer HistoryPointer) error {
 	return nil
 }
 
-// pointerFile returns the file path to store the history pointers for the given group and sha
-func pointerFile(group, sha string) (string, error) {
-	dir, err := pointerDir(group)
+// readFile reads the history pointer file and returns the content as a byte slice
+func (hp HistoryPointer) readFile() ([]byte, error) {
+	file, err := hp.filepath()
 	if err != nil {
-		return "", fmt.Errorf("PointerFile(%s, %s): %w", group, sha, err)
+		return nil, fmt.Errorf("hp.readPointerFile: get pointer file: %w", err)
+	}
+
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, fmt.Errorf("hp.readPointerFile: open pointer file: %w", err)
+	}
+	defer f.Close()
+
+	r, err := zlib.NewReader(f)
+	if err != nil {
+		return nil, fmt.Errorf("hp.readPointerFile: zlib read: %w", err)
+	}
+	defer r.Close()
+
+	content, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("hp.readPointerFile: read pointer content: %w", err)
+	}
+
+	return content, nil
+}
+
+// filepath returns the file path to store the history pointers of HistoryPointer struct
+func (hp HistoryPointer) filepath() (string, error) {
+	dir, err := pointerDir(hp.Group)
+	if err != nil {
+		return "", fmt.Errorf("hp.pointerFile: %w", err)
 	}
 
 	return filepath.Join(
 		dir,
-		sha[:2],
+		hp.ParentHash[:2],
 		shelf_history_pointer_file,
 	), nil
 }
