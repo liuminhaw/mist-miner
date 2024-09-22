@@ -24,6 +24,8 @@ const (
 	SHELF_HISTORY_LOGS_NEXT = "...>>>"
 	// SHELF_HISTORY_LOGS_PER_PAGE = 10
 	SHELF_HISTORY_LOGS_PER_PAGE = 1000
+
+    shelf_temp_base_dir = "mist-miner"
 )
 
 // RefFile returns the file path to store the reference to the latest record mark

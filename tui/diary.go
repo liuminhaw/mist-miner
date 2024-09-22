@@ -1,16 +1,34 @@
 package tui
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/liuminhaw/mist-miner/shared"
 	"github.com/liuminhaw/mist-miner/shelf"
 )
+
+type editorFinishedMsg struct{ err error }
+
+func openEditor(file string) tea.Cmd {
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = "vim"
+	}
+	c := exec.Command(editor, file) //nolint:gosec
+	return tea.ExecProcess(c, func(err error) tea.Msg {
+		return editorFinishedMsg{err}
+	})
+}
 
 type diaryItem struct {
 	identifier     string
 	identifierHash string
+	diaryHash      string
 	alias          string
 	hasNote        bool
 }
@@ -21,7 +39,7 @@ func (i diaryItem) Description() string {
 	if i.alias == "" {
 		msg = fmt.Sprintf("hash: %s", i.identifierHash[:12])
 	} else {
-		msg = fmt.Sprintf("alias: %s, hash: %s", i.alias, i.identifierHash[:12])
+		msg = fmt.Sprintf("alias: %s, hash: %s", i.alias, i.diaryHash[:12])
 	}
 
 	return msg
@@ -37,6 +55,10 @@ type diaryModel struct {
 	list   list.Model
 	width  int
 	height int
+
+	// editor diaryEditor
+
+	err error
 }
 
 func InitDiaryModel(group, plugin string) (tea.Model, error) {
@@ -46,8 +68,9 @@ func InitDiaryModel(group, plugin string) (tea.Model, error) {
 	}
 
 	model := diaryModel{
-		group: group,
-		list:  list,
+		group:  group,
+		plugin: plugin,
+		list:   list,
 	}
 	model.list.Title = fmt.Sprintf("Diary for group %s", group)
 	model.list.SetStatusBarItemName("resource", "resources")
@@ -72,6 +95,45 @@ func (m diaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "e":
+			selectedItem := m.list.SelectedItem().(diaryItem)
+			mDiary, err := readMinerDiary(m.group, selectedItem.identifierHash)
+			if err != nil {
+				m.err = err
+			}
+
+			// diary := shelf.NewDiary(m.group, m.plugin, mDiary.Hash)
+			diary := shelf.NewDiary(
+				m.group,
+				m.plugin,
+				selectedItem.identifier,
+				selectedItem.alias,
+				mDiary.Hash,
+			)
+			if diary.Exist() {
+				// Get the diary record
+				// Copy the diary record to a temporary file
+				// Open the editor with the temporary file
+			} else {
+				// Create a new diary record in temporary file
+				tempDiary, err := diary.NewTempFile()
+				if err != nil {
+					m.err = err
+				}
+
+				if !tempDiary.Exist() {
+					if err := tempDiary.Init(); err != nil {
+						m.err = err
+					}
+					defer tempDiary.Close()
+				}
+
+				// Open the editor with the new diary record
+				return m, openEditor(tempDiary.Path)
+			}
+
+			// return m, openEditor()
+
 			// case "enter":
 			// 	selectedItem := m.list.SelectedItem().(logItem)
 			// 	if strings.Contains(selectedItem.hash, shelf.SHELF_HISTORY_LOGS_PREV) {
@@ -87,6 +149,11 @@ func (m diaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// 	mark, _ := InitMarkModel(m.group, selectedItem.hash, m)
 			// 	return mark.Update(tuiWindowSize)
 		}
+	case editorFinishedMsg:
+		if msg.err != nil {
+			m.err = msg.err
+			return m, tea.Quit
+		}
 	}
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
@@ -94,6 +161,9 @@ func (m diaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m diaryModel) View() string {
+	if m.err != nil {
+		return fmt.Sprintf("Error: %s\n", m.err)
+	}
 	return listStyle.Render(m.list.View())
 }
 
@@ -128,8 +198,10 @@ func readDiaryItems(group, plugin string) (list.Model, error) {
 			}
 
 			items = append(items, diaryItem{
-				identifier:     idHashMap.Identifier,
+				identifier: idHashMap.Identifier,
+				// identifierHash: outline.ResourceHash,
 				identifierHash: outline.ResourceHash,
+				diaryHash:      outline.DiaryHash,
 				alias:          idHashMap.Alias,
 			})
 
@@ -140,4 +212,18 @@ func readDiaryItems(group, plugin string) (list.Model, error) {
 	// TODO: Handle and show message if no matching plugin found
 
 	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil
+}
+
+func readMinerDiary(group, hash string) (shared.MinerDiary, error) {
+	content, err := shelf.NewObjectRecord(group, hash).RecordRead()
+	if err != nil {
+		return shared.MinerDiary{}, fmt.Errorf("readMinerDiary(%s, %s): %w", group, hash, err)
+	}
+
+	diary := shared.MinerDiary{}
+	if err := json.Unmarshal([]byte(content), &diary); err != nil {
+		return shared.MinerDiary{}, fmt.Errorf("readMinerDiary(%s, %s): %w", group, hash, err)
+	}
+
+	return diary, nil
 }

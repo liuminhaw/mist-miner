@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -20,9 +21,9 @@ func NewObjectRecord(group, hash string) ShelfRecord {
 	return newShelfRecord(group, shelf_object_dir, hash)
 }
 
-func NewDiaryRecord(group, hash string) ShelfRecord {
-	return newShelfRecord(group, shelf_diary_dir, hash)
-}
+// func NewDiaryRecord(group, hash string) ShelfRecord {
+// 	return newShelfRecord(group, shelf_diary_dir, hash)
+// }
 
 func newShelfRecord(group, recordType, hash string) ShelfRecord {
 	return ShelfRecord{
@@ -33,13 +34,13 @@ func newShelfRecord(group, recordType, hash string) ShelfRecord {
 }
 
 // RecordFile returns the file path of the shelf record
-func (r ShelfRecord) RecordFile() (string, error) {
-	dir, err := r.recordDir()
+func (sr ShelfRecord) RecordFile() (string, error) {
+	dir, err := sr.recordDir()
 	if err != nil {
 		return "", fmt.Errorf("RecordFile(): %w", err)
 	}
 
-	return filepath.Join(dir, r.Hash[2:]), nil
+	return filepath.Join(dir, sr.Hash[2:]), nil
 }
 
 // RecordRead returns the entire content of the shelf record, and will try to
@@ -91,8 +92,19 @@ func (sr ShelfRecord) RecordReadCloser() (io.ReadCloser, error) {
 	return r, nil
 }
 
+// Exists checks if the shelf record exists
+func (sr ShelfRecord) Exist() bool {
+	path, err := sr.RecordFile()
+	if err != nil {
+		return false
+	}
+
+	_, err = os.Stat(path)
+	return !errors.Is(err, os.ErrNotExist)
+}
+
 // recordDir returns the directory path of the shelf record
-func (r ShelfRecord) recordDir() (string, error) {
+func (sr ShelfRecord) recordDir() (string, error) {
 	execPath, err := os.Executable()
 	if err != nil {
 		return "", fmt.Errorf("RecordDir(): get executable: %w", err)
@@ -101,8 +113,8 @@ func (r ShelfRecord) recordDir() (string, error) {
 	return filepath.Join(
 		filepath.Dir(execPath),
 		shelf_dir,
-		r.Group,
-		r.Type,
-		r.Hash[:2],
+		sr.Group,
+		sr.Type,
+		sr.Hash[:2],
 	), nil
 }

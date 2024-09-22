@@ -28,4 +28,4 @@ config.hcl
 
 # Execution results
 .miner
-.miner-bkp
+.miner-bkp*
