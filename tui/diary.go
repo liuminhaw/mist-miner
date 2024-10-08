@@ -12,16 +12,22 @@ import (
 	"github.com/liuminhaw/mist-miner/shelf"
 )
 
-type editorFinishedMsg struct{ err error }
+type editorFinishedMsg struct {
+	diary shelf.DiaryTempFile
+	err   error
+}
 
-func openEditor(file string) tea.Cmd {
+func openEditor(tempDiary shelf.DiaryTempFile) tea.Cmd {
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
 		editor = "vim"
 	}
-	c := exec.Command(editor, file) //nolint:gosec
+	c := exec.Command(editor, tempDiary.Path) //nolint:gosec
 	return tea.ExecProcess(c, func(err error) tea.Msg {
-		return editorFinishedMsg{err}
+		return editorFinishedMsg{
+			diary: tempDiary,
+			err:   err,
+		}
 	})
 }
 
@@ -126,10 +132,14 @@ func (m diaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.err = err
 					}
 					defer tempDiary.Close()
+				} else {
+					if err := tempDiary.CopyFromStatic(); err != nil {
+						m.err = err
+					}
 				}
 
 				// Open the editor with the new diary record
-				return m, openEditor(tempDiary.Path)
+				return m, openEditor(tempDiary)
 			}
 
 			// return m, openEditor()
@@ -152,6 +162,10 @@ func (m diaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case editorFinishedMsg:
 		if msg.err != nil {
 			m.err = msg.err
+			return m, tea.Quit
+		}
+		if err := msg.diary.ToStaticTemp(); err != nil {
+			m.err = err
 			return m, tea.Quit
 		}
 	}

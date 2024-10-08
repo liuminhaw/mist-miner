@@ -1,9 +1,10 @@
 package shelf
 
 import (
-	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -33,7 +34,6 @@ func NewDiary(group, plugin, identifier, alias, hash string) Diary {
 	}
 }
 
-
 // Exist checks if the diary record (object) exists
 func (d *Diary) Exist() bool {
 	if d.Hash == "" {
@@ -44,13 +44,19 @@ func (d *Diary) Exist() bool {
 	return record.Exist()
 }
 
-// createTempFile creates a temporary file for the diary record if it does not exist
+// NewTempFile creates a temporary file for the diary record if it does not exist
 // and returns the file path with error if any
 func (d *Diary) NewTempFile() (DiaryTempFile, error) {
+	path, err := d.tempFile()
+	if err != nil {
+		return DiaryTempFile{}, fmt.Errorf("diary NewTempFile: %w", err)
+	}
+
 	return DiaryTempFile{
-        Path: d.tempFile(), 
-        Meta: d.Meta,
-    }, nil
+		Path:       path,
+		StaticPath: d.staticTempFile(),
+		Meta:       d.Meta,
+	}, nil
 }
 
 // tempDir returns the temporary directory to generate the diary record
@@ -60,19 +66,33 @@ func (d *Diary) tempDir() string {
 
 // tempFile returns the temporary file to generate the diary record
 // the file will be interpret in markdown format
-func (d *Diary) tempFile() string {
-	hash := sha256.New()
-	hash.Write([]byte(d.Meta.Identifier))
-	identifierHash := fmt.Sprintf("%x", hash.Sum(nil))
+// filename format: <identifierBase64Encode>.<random>.md
+func (d *Diary) tempFile() (string, error) {
+	identifierEncode := base64.RawURLEncoding.EncodeToString([]byte(d.Meta.Identifier))
 
-	filename := fmt.Sprintf("%s.md", identifierHash)
+	randBytes, err := randomHex(4)
+	if err != nil {
+		return "", fmt.Errorf("diary temp file: %w", err)
+	}
+
+	filename := fmt.Sprintf("%s.%s.md", identifierEncode, randBytes)
+	return filepath.Join(d.tempDir(), filename), nil
+}
+
+// staticTempFile returns the static temporary file to store the edited diary record
+// filename format: <identifierBase64Encode>.md
+func (d *Diary) staticTempFile() string {
+	identifierEncode := base64.RawURLEncoding.EncodeToString([]byte(d.Meta.Identifier))
+	filename := fmt.Sprintf("%s.md", identifierEncode)
+
 	return filepath.Join(d.tempDir(), filename)
 }
 
 type DiaryTempFile struct {
-	File *os.File
-	Path string
-	Meta DiaryMeta
+	File       *os.File
+	Path       string
+	StaticPath string
+	Meta       DiaryMeta
 }
 
 func (d *DiaryTempFile) Init() error {
@@ -81,12 +101,12 @@ func (d *DiaryTempFile) Init() error {
 		return fmt.Errorf("diary temp file init: %w", err)
 	}
 
-    var initMsg string
+	var initMsg string
 	if d.Meta.Alias != "" {
-        initMsg = fmt.Sprintf("# %s\n\n", d.Meta.Alias)
+		initMsg = fmt.Sprintf("# %s\n\n", d.Meta.Alias)
 	} else {
-        initMsg = fmt.Sprintf("# %s\n\n", d.Meta.Identifier)
-    }
+		initMsg = fmt.Sprintf("# %s\n\n", d.Meta.Identifier)
+	}
 	initMsg += fmt.Sprint("## Basic Info\n\n")
 	initMsg += fmt.Sprintf("- **Group:** %s\n", d.Meta.Group)
 	initMsg += fmt.Sprintf("- **Plugin:** %s\n", d.Meta.Plugin)
@@ -102,21 +122,55 @@ func (d *DiaryTempFile) Init() error {
 }
 
 func (d *DiaryTempFile) Close() error {
-    if d.File != nil {
-        if err := d.File.Close(); err != nil {
-            return fmt.Errorf("diary temp file close: %w", err)
-        }
-    }
+	if d.File != nil {
+		if err := d.File.Close(); err != nil {
+			return fmt.Errorf("diary temp file close: %w", err)
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func (d *DiaryTempFile) Exist() bool {
-    if _, err := os.Stat(d.Path); errors.Is(err, os.ErrNotExist) {
-        return false
-    }
+	if _, err := os.Stat(d.StaticPath); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
 
-    return true
+	return true
+}
+
+// ToStaticTemp renames the temporary file to a static temporary file
+// static temporary file format: <identifierBase64Encode>.md
+func (d *DiaryTempFile) ToStaticTemp() error {
+	if err := os.Rename(d.Path, d.StaticPath); err != nil {
+		return fmt.Errorf("diaryTempFile ToStaticTemp: %w", err)
+	}
+
+	return nil
+}
+
+// CopyFromStatic copies the static temporary file to the temporary file for editing
+func (d *DiaryTempFile) CopyFromStatic() error {
+	sourceFile, err := os.Open(d.StaticPath)
+	if err != nil {
+		return fmt.Errorf("diaryTempFile CopyFromStatic: open static: %w", err)
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(d.Path)
+	if err != nil {
+		return fmt.Errorf("diaryTempFile CopyFromStatic: create temp: %w", err)
+	}
+	defer destFile.Close()
+
+	if _, err := io.Copy(destFile, sourceFile); err != nil {
+		return fmt.Errorf("diaryTempFile CopyFromStatic: copy: %w", err)
+	}
+	if err := destFile.Sync(); err != nil {
+		return fmt.Errorf("diaryTempFile CopyFromStatic: sync: %w", err)
+	}
+
+	return nil
 }
 
 func (d *DiaryTempFile) create() error {
@@ -133,4 +187,3 @@ func (d *DiaryTempFile) create() error {
 
 	return nil
 }
-
