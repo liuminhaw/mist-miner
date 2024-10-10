@@ -61,7 +61,13 @@ func (d *Diary) NewTempFile() (DiaryTempFile, error) {
 
 // tempDir returns the temporary directory to generate the diary record
 func (d *Diary) tempDir() string {
-	return filepath.Join(os.TempDir(), shelf_temp_base_dir, d.Meta.Group, d.Meta.Plugin)
+	return filepath.Join(
+		os.TempDir(),
+		shelf_temp_base_dir,
+		shelf_diary_dir,
+		d.Meta.Group,
+		d.Meta.Plugin,
+	)
 }
 
 // tempFile returns the temporary file to generate the diary record
@@ -76,7 +82,7 @@ func (d *Diary) tempFile() (string, error) {
 	}
 
 	filename := fmt.Sprintf("%s.%s.md", identifierEncode, randBytes)
-	return filepath.Join(d.tempDir(), filename), nil
+	return filepath.Join(d.tempDir(), "temp", filename), nil
 }
 
 // staticTempFile returns the static temporary file to store the edited diary record
@@ -85,7 +91,7 @@ func (d *Diary) staticTempFile() string {
 	identifierEncode := base64.RawURLEncoding.EncodeToString([]byte(d.Meta.Identifier))
 	filename := fmt.Sprintf("%s.md", identifierEncode)
 
-	return filepath.Join(d.tempDir(), filename)
+	return filepath.Join(d.tempDir(), "static", filename)
 }
 
 type DiaryTempFile struct {
@@ -142,6 +148,10 @@ func (d *DiaryTempFile) Exist() bool {
 // ToStaticTemp renames the temporary file to a static temporary file
 // static temporary file format: <identifierBase64Encode>.md
 func (d *DiaryTempFile) ToStaticTemp() error {
+	if err := os.MkdirAll(filepath.Dir(d.StaticPath), 0755); err != nil {
+		return fmt.Errorf("diaryTempFile ToStaticTemp: mkdir static temp dir: %w", err)
+	}
+
 	if err := os.Rename(d.Path, d.StaticPath); err != nil {
 		return fmt.Errorf("diaryTempFile ToStaticTemp: %w", err)
 	}

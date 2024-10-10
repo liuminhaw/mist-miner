@@ -162,11 +162,9 @@ func (m diaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case editorFinishedMsg:
 		if msg.err != nil {
 			m.err = msg.err
-			return m, tea.Quit
 		}
 		if err := msg.diary.ToStaticTemp(); err != nil {
 			m.err = err
-			return m, tea.Quit
 		}
 	}
 	var cmd tea.Cmd
