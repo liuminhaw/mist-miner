@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type DiaryMeta struct {
@@ -137,8 +138,18 @@ func (d *DiaryTempFile) Close() error {
 	return nil
 }
 
-func (d *DiaryTempFile) Exist() bool {
+// StaticExist checks if the static temporary file exists
+func (d *DiaryTempFile) StaticExist() bool {
 	if _, err := os.Stat(d.StaticPath); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+
+	return true
+}
+
+// TempExist checks if the temporary file exists
+func (d *DiaryTempFile) TempExist() bool {
+	if _, err := os.Stat(d.Path); errors.Is(err, os.ErrNotExist) {
 		return false
 	}
 
@@ -148,12 +159,31 @@ func (d *DiaryTempFile) Exist() bool {
 // ToStaticTemp renames the temporary file to a static temporary file
 // static temporary file format: <identifierBase64Encode>.md
 func (d *DiaryTempFile) ToStaticTemp() error {
+	if !d.TempExist() {
+		return fmt.Errorf("diaryTempFile ToStaticTemp: temp file does not exist")
+	}
+
 	if err := os.MkdirAll(filepath.Dir(d.StaticPath), 0755); err != nil {
 		return fmt.Errorf("diaryTempFile ToStaticTemp: mkdir static temp dir: %w", err)
 	}
 
-	if err := os.Rename(d.Path, d.StaticPath); err != nil {
-		return fmt.Errorf("diaryTempFile ToStaticTemp: %w", err)
+	fileInfo, _ := os.Stat(d.Path)
+	tempModtime := fileInfo.ModTime()
+
+	var staticModtime time.Time
+	if d.StaticExist() {
+		fileInfo, _ := os.Stat(d.StaticPath)
+		staticModtime = fileInfo.ModTime()
+	}
+
+	if tempModtime.After(staticModtime) {
+		if err := os.Rename(d.Path, d.StaticPath); err != nil {
+			return fmt.Errorf("diaryTempFile ToStaticTemp: %w", err)
+		}
+	} else {
+		if err := os.Remove(d.Path); err != nil {
+			return fmt.Errorf("diaryTempFile ToStaticTemp: remove temp: %w", err)
+		}
 	}
 
 	return nil

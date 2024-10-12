@@ -127,7 +127,7 @@ func (m diaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.err = err
 				}
 
-				if !tempDiary.Exist() {
+				if !tempDiary.StaticExist() {
 					if err := tempDiary.Init(); err != nil {
 						m.err = err
 					}
