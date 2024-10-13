@@ -227,3 +227,4 @@ func (d *DiaryTempFile) create() error {
 
 	return nil
 }
+

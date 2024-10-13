@@ -38,3 +38,7 @@ func RefFile(group, name string) (string, error) {
 
 	return filepath.Join(filepath.Dir(execPath), shelf_dir, group, shelf_ref_dir, name), nil
 }
+
+func ShelfTempDiary() string {
+    return filepath.Join(os.TempDir(), shelf_temp_base_dir, shelf_diary_dir)
+}
