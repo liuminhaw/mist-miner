@@ -22,7 +22,7 @@ type commitDiaryItem struct {
 
 func (i commitDiaryItem) Title() string { return i.identifier }
 func (i commitDiaryItem) Description() string {
-    return fmt.Sprintf("Group: %s, plugin: %s", i.group, i.plugin)
+	return fmt.Sprintf("Group: %s, plugin: %s", i.group, i.plugin)
 }
 
 func (i commitDiaryItem) FilterValue() string {
@@ -37,13 +37,13 @@ type commitDiaryModel struct {
 
 func InitCommitDiaryModel() (tea.Model, error) {
 	list, err := readCommitDiaryItems()
-    if err != nil {
-        return nil, fmt.Errorf("init commit diary model: %w", err)
-    }
+	if err != nil {
+		return nil, fmt.Errorf("init commit diary model: %w", err)
+	}
 
-    model := commitDiaryModel{
-        list: list,
-    }
+	model := commitDiaryModel{
+		list: list,
+	}
 	model.list.Title = "Diaries to commit"
 	model.list.SetStatusBarItemName("diary", "diaries")
 	model.list.SetFilteringEnabled(true)
@@ -67,6 +67,10 @@ func (m commitDiaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "enter":
+			selectedItem := m.list.SelectedItem().(commitDiaryItem)
+			detail, _ := InitCommitDetailModel(selectedItem.filepath, m)
+			return detail.Update(tuiWindowSize)
 		}
 	}
 
@@ -121,5 +125,5 @@ func readCommitDiaryItems() (list.Model, error) {
 		}
 	}
 
-    return list.New(items, list.NewDefaultDelegate(), 0, 0), nil
+	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil
 }

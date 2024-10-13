@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -9,21 +8,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/liuminhaw/mist-miner/shared"
 	"github.com/liuminhaw/mist-miner/shelf"
 )
 
-// You generally won't need this unless you're processing stuff with
-// complicated ANSI escape sequences. Turn it on if you notice flickering.
-//
-// Also keep in mind that high performance rendering only works for programs
-// that use the full size of the terminal. We're enabling that below with
-// tea.EnterAltScreen().
-// var useHighPerformanceRenderer = true
-
-type resourceDetailModel struct {
-	group           string
-	hash            string
+type commitDetailModel struct {
+	filepath        string
+	identifier      string
 	content         string
 	ready           bool
 	viewport        viewport.Model
@@ -32,42 +22,32 @@ type resourceDetailModel struct {
 	prevModel tea.Model
 }
 
-func InitResourceDetailModel(
-	group, hash string,
-	prev tea.Model,
-) (tea.Model, error) {
-	content, err := shelf.NewObjectRecord(group, hash).RecordRead()
+func InitCommitDetailModel(staticTempPath string, prev tea.Model) (tea.Model, error) {
+	staticTmp, err := shelf.NewDiaryStaticTempFile(staticTempPath)
 	if err != nil {
-		return nil, fmt.Errorf("InitResourceDetailModel(%s, %s): %w", group, hash, err)
+		return nil, fmt.Errorf("InitCommitDetailModel: %w", err)
 	}
 
-	resource := shared.MinerResource{}
-	if err := json.Unmarshal([]byte(content), &resource); err != nil {
-		return nil, fmt.Errorf("InitResourceDetailModel(%s, %s): %w", group, hash, err)
-	}
-	resourceMd, err := resource.RenderMarkdown()
+	content, err := staticTmp.Read()
 	if err != nil {
-		return nil, fmt.Errorf("InitResourceDetailModel(%s, %s): %w", group, hash, err)
+		return nil, fmt.Errorf("InitCommitDetailModel: %w", err)
 	}
 
-	model := resourceDetailModel{
-		group: group,
-		hash:  hash,
-		// content:   content,
-		content:         resourceMd,
+	return commitDetailModel{
+		filepath:        staticTempPath,
+		identifier:      staticTmp.Meta.Identifier,
+		content:         content,
 		ready:           false,
 		prevModel:       prev,
 		highPerformance: true,
-	}
-
-	return model, nil
+	}, nil
 }
 
-func (m resourceDetailModel) Init() tea.Cmd {
+func (m commitDetailModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m resourceDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m commitDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
@@ -132,7 +112,7 @@ func (m resourceDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case prevPageMsg:
 		return m.prevModel.Update(tuiWindowSize)
 	case reloadDetailMsg:
-		detail, _ := InitResourceDetailModel(m.group, m.hash, m.prevModel)
+		detail, _ := InitCommitDetailModel(m.filepath, m.prevModel)
 		return detail.Update(tuiWindowSize)
 	}
 
@@ -143,32 +123,25 @@ func (m resourceDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m resourceDetailModel) View() string {
+func (m commitDetailModel) View() string {
 	if !m.ready {
-		return "\n  Initializing..."
+		return "\n Initializing..."
 	}
 	return detailDocStyle.Render(
 		lipgloss.JoinVertical(lipgloss.Top, m.headerView(), m.viewport.View(), m.footerView()),
 	)
 }
 
-func (m resourceDetailModel) headerView() string {
-	title := detailTitleStyle.Render(fmt.Sprintf("Resource: %s", m.hash[:12]))
+func (m commitDetailModel) headerView() string {
+	title := detailTitleStyle.Render(fmt.Sprintf("Resource: %s", m.identifier))
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color(colorTitleBackground)).Margin(1, 0, 1, 0)
 	line := style.Render(strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title))))
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 }
 
-func (m resourceDetailModel) footerView() string {
+func (m commitDetailModel) footerView() string {
 	info := detailFooterStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color(colorTitleBackground)).Margin(0, 0, 1, 0)
 	line := style.Render(strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info))))
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

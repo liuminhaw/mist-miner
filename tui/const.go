@@ -11,6 +11,12 @@ const (
 	colorMainText        = "#dddddd"
 )
 
+// Custom struct for tea messages
+type (
+	prevPageMsg     struct{}
+	reloadDetailMsg struct{}
+)
+
 var (
 	tuiWindowSize tea.WindowSizeMsg
 
