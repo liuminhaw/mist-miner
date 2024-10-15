@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/liuminhaw/mist-miner/locks"
@@ -58,6 +59,20 @@ func InitLogModel(group string, logIdx int) (tea.Model, error) {
 		logIndex: logIdx,
 	}
 	model.list.Title = fmt.Sprintf("Mined logs for group %s", group)
+
+	model.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			customKeys.enter,
+			customKeys.quit,
+		}
+	}
+	model.list.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			customKeys.enter,
+			customKeys.quit,
+		}
+	}
+
 	model.list.SetStatusBarItemName("entry", "entries")
 	model.list.SetFilteringEnabled(true)
 	model.list.DisableQuitKeybindings()

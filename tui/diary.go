@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/liuminhaw/mist-miner/shared"
@@ -79,6 +80,20 @@ func InitDiaryModel(group, plugin string) (tea.Model, error) {
 		list:   list,
 	}
 	model.list.Title = fmt.Sprintf("Diary for group %s", group)
+
+	model.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			customKeys.quit,
+			customKeys.editor,
+		}
+	}
+	model.list.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			customKeys.quit,
+			customKeys.editor,
+		}
+	}
+
 	model.list.SetStatusBarItemName("resource", "resources")
 	model.list.SetFilteringEnabled(true)
 	model.list.DisableQuitKeybindings()

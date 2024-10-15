@@ -14,7 +14,7 @@ import (
 
 // commitCmd represents the commit command
 var CommitCmd = &cobra.Command{
-	Use:          "commit <group>",
+	Use:          "commit",
 	Short:        "Commit udpated diary records to history",
 	Long:         ``,
 	SilenceUsage: true,

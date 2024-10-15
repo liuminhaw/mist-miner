@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/liuminhaw/mist-miner/shelf"
@@ -45,6 +46,20 @@ func InitCommitDiaryModel() (tea.Model, error) {
 		list: list,
 	}
 	model.list.Title = "Diaries to commit"
+
+	model.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			customKeys.enter,
+			customKeys.quit,
+		}
+	}
+	model.list.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			customKeys.enter,
+			customKeys.quit,
+		}
+	}
+
 	model.list.SetStatusBarItemName("diary", "diaries")
 	model.list.SetFilteringEnabled(true)
 	model.list.DisableQuitKeybindings()

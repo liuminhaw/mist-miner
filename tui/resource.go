@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/liuminhaw/mist-miner/shelf"
@@ -50,6 +51,22 @@ func InitResourceModel(group, resourceHash string, prev tea.Model) (tea.Model, e
 		prevModel: prev,
 	}
 	model.list.Title = fmt.Sprintf("Plugin: %s in group %s", resourceHash[:8], group)
+
+	model.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			customKeys.enter,
+			customKeys.quit,
+			customKeys.back,
+		}
+	}
+	model.list.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			customKeys.enter,
+			customKeys.quit,
+			customKeys.back,
+		}
+	}
+
 	model.list.SetStatusBarItemName("entry", "entries")
 	model.list.SetFilteringEnabled(true)
 	model.list.DisableQuitKeybindings()
@@ -72,7 +89,7 @@ func (m resourceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "ctrl+z":
+		case "b":
 			return m.prevModel.Update(tuiWindowSize)
 		case "enter":
 			selectedItem := m.list.SelectedItem().(resourceItem)
