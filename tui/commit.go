@@ -72,6 +72,8 @@ func (m commitDiaryModel) Init() tea.Cmd {
 }
 
 func (m commitDiaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		tuiWindowSize = msg
@@ -86,6 +88,19 @@ func (m commitDiaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			selectedItem := m.list.SelectedItem().(commitDiaryItem)
 			detail, _ := InitCommitDetailModel(selectedItem.filepath, m)
 			return detail.Update(tuiWindowSize)
+		case "c":
+			submitModel, _ := InitCommitSubmitModel(m.list.Items())
+			cmds = append(cmds, tea.ExitAltScreen, submitModel.Init())
+			return submitModel, tea.Batch(cmds...)
+
+			// Commit current updated diaries
+			// On each selected identifier object
+			// - Get current diary record
+			// - Create a new diary record
+			// - Update stuff outline content
+			// - Update identifier hash maps content
+			// Update label mark content after all identifier hash maps are updated
+			// Create new log entry ()
 		}
 	}
 
