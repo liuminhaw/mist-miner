@@ -1,6 +1,8 @@
 package shelf
 
 import (
+	"compress/zlib"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -94,6 +96,38 @@ func (d *Diary) Exist() bool {
 
 	record := NewObjectRecord(d.Meta.Group, d.Hash)
 	return record.Exist()
+}
+
+// Write writes the diary record to file using hash value as directory and filename
+func (d *Diary) Write() error {
+	diaryFile, err := NewObjectRecord(d.Meta.Group, d.Hash).RecordFile()
+	if err != nil {
+		return fmt.Errorf("diary write: %w", err)
+	}
+	if _, err := os.Stat(diaryFile); !errors.Is(err, os.ErrNotExist) {
+		fmt.Printf("diary file already exists: %s\n", diaryFile)
+		return nil
+	}
+
+	err = os.MkdirAll(filepath.Dir(diaryFile), os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("diary write: mkdir: %w", err)
+	}
+
+	f, err := os.Create(diaryFile)
+	if err != nil {
+		return fmt.Errorf("diary write: create file: %w", err)
+	}
+	defer f.Close()
+
+	w := zlib.NewWriter(f)
+	_, err = w.Write([]byte(d.Content))
+	if err != nil {
+		return fmt.Errorf("diary write: write file: %w", err)
+	}
+	defer w.Close()
+
+	return nil
 }
 
 // NewTempFile creates a temporary file for the diary record if it does not exist
@@ -271,4 +305,61 @@ func (d *DiaryStaticTempFile) Read() (string, error) {
 	}
 
 	return string(content), nil
+}
+
+func (d *DiaryStaticTempFile) CalcHash() (string, error) {
+	content, err := d.Read()
+	if err != nil {
+		return "", fmt.Errorf("DiaryStaticTempFile CalcHash: %w", err)
+	}
+
+	h := sha256.New()
+	_, err = h.Write([]byte(content))
+	if err != nil {
+		return "", fmt.Errorf("DiaryStaticTempFile CalcHash: %w", err)
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func (d *DiaryStaticTempFile) WriteDiary() (Diary, error) {
+	content, err := d.Read()
+	if err != nil {
+		return Diary{}, fmt.Errorf("diaryStaticTempFile WriteDiary: %w", err)
+	}
+	hash, err := d.CalcHash()
+	if err != nil {
+		return Diary{}, fmt.Errorf("diaryStaticTempFile WriteDiary: %w", err)
+	}
+	diaryFile, err := NewObjectRecord(d.Meta.Group, hash).RecordFile()
+	if err != nil {
+		return Diary{}, fmt.Errorf("diaryStaticTempFile WriteDiary: %w", err)
+	}
+
+	if _, err := os.Stat(diaryFile); !errors.Is(err, os.ErrNotExist) {
+		return Diary{}, fmt.Errorf(
+			"diaryStaticTempFile WriteDiary: diary file already exists: %s",
+			diaryFile,
+		)
+	}
+
+	err = os.MkdirAll(filepath.Dir(diaryFile), os.ModePerm)
+	if err != nil {
+		return Diary{}, fmt.Errorf("diaryStaticTempFile WriteDiary: mkdir: %w", err)
+	}
+
+	f, err := os.Create(diaryFile)
+	if err != nil {
+		return Diary{}, fmt.Errorf("diaryStaticTempFile WriteDiary: create file: %w", err)
+	}
+	defer f.Close()
+
+	w := zlib.NewWriter(f)
+	_, err = w.Write([]byte(content))
+	if err != nil {
+		return Diary{}, fmt.Errorf("diaryStaticTempFile WriteDiary: write file: %w", err)
+	}
+	defer w.Close()
+
+	return NewDiary(d.Meta.Group, d.Meta.Plugin, d.Meta.Identifier, d.Meta.Alias, hash), nil
 }

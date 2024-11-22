@@ -14,19 +14,20 @@ import (
 
 // commitCmd represents the commit command
 var CommitCmd = &cobra.Command{
-	Use:          "commit",
+	Use:          "commit <group>",
 	Short:        "Commit udpated diary records to history",
 	Long:         ``,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 0 {
+		if len(args) != 1 {
 			return mmerr.NewArgsError(
 				mmerr.DiaryCmdType,
-				fmt.Sprintf("accepts 0 args, received %d", len(args)),
+				fmt.Sprintf("accepts 1 args, received %d", len(args)),
 			)
 		}
+		group := args[0]
 
-		model, err := tui.InitCommitDiaryModel()
+		model, err := tui.InitCommitDiaryModel(group)
 		if err != nil {
 			return fmt.Errorf("diary commit sub-command failed: %w", err)
 		}

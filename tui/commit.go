@@ -36,8 +36,8 @@ type commitDiaryModel struct {
 	height int
 }
 
-func InitCommitDiaryModel() (tea.Model, error) {
-	list, err := readCommitDiaryItems()
+func InitCommitDiaryModel(group string) (tea.Model, error) {
+	list, err := readCommitDiaryItems(group)
 	if err != nil {
 		return nil, fmt.Errorf("init commit diary model: %w", err)
 	}
@@ -113,47 +113,47 @@ func (m commitDiaryModel) View() string {
 	return listStyle.Render(m.list.View())
 }
 
-func readCommitDiaryItems() (list.Model, error) {
+func readCommitDiaryItems(group string) (list.Model, error) {
 	items := []list.Item{}
 
-	groups, err := os.ReadDir(shelf.ShelfTempDiary())
+	// groups, err := os.ReadDir(shelf.ShelfTempDiary())
+	// if err != nil {
+	// 	return list.Model{}, fmt.Errorf("read commit diary items: %v", err)
+	// }
+
+	// for _, group := range groups {
+	plugins, err := os.ReadDir(filepath.Join(shelf.ShelfTempDiary(), group))
 	if err != nil {
 		return list.Model{}, fmt.Errorf("read commit diary items: %v", err)
 	}
 
-	for _, group := range groups {
-		plugins, err := os.ReadDir(filepath.Join(shelf.ShelfTempDiary(), group.Name()))
+	for _, plugin := range plugins {
+		tempDir := filepath.Join(shelf.ShelfTempDiary(), group, plugin.Name(), "static")
+		files, err := os.ReadDir(tempDir)
 		if err != nil {
 			return list.Model{}, fmt.Errorf("read commit diary items: %v", err)
 		}
 
-		for _, plugin := range plugins {
-			tempDir := filepath.Join(shelf.ShelfTempDiary(), group.Name(), plugin.Name(), "static")
-			files, err := os.ReadDir(tempDir)
+		for _, file := range files {
+			filenameWithoutExt := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
+			decodedBytes, err := base64.RawURLEncoding.DecodeString(filenameWithoutExt)
 			if err != nil {
-				return list.Model{}, fmt.Errorf("read commit diary items: %v", err)
+				return list.Model{}, fmt.Errorf(
+					"read commit diary items: decode filename: %w",
+					err,
+				)
 			}
 
-			for _, file := range files {
-				filenameWithoutExt := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
-				decodedBytes, err := base64.RawURLEncoding.DecodeString(filenameWithoutExt)
-				if err != nil {
-					return list.Model{}, fmt.Errorf(
-						"read commit diary items: decode filename: %w",
-						err,
-					)
-				}
-
-				items = append(items, commitDiaryItem{
-					filename:   file.Name(),
-					filepath:   filepath.Join(tempDir, file.Name()),
-					group:      group.Name(),
-					plugin:     plugin.Name(),
-					identifier: string(decodedBytes),
-				})
-			}
+			items = append(items, commitDiaryItem{
+				filename:   file.Name(),
+				filepath:   filepath.Join(tempDir, file.Name()),
+				group:      group,
+				plugin:     plugin.Name(),
+				identifier: string(decodedBytes),
+			})
 		}
 	}
+	// }
 
 	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil
 }
