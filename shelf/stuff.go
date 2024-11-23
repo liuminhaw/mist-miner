@@ -112,34 +112,52 @@ func NewStuff(group string, a any) (*Stuff, error) {
 }
 
 // Write writes the Stuff resource content to a file
-func (s *Stuff) Write() error {
+// func (s *Stuff) Write() error {
+func (s *Stuff) Write() (string, error) {
 	stuffFile, err := NewObjectRecord(s.Group, s.Hash).RecordFile()
 	if err != nil {
-		return fmt.Errorf("stuff write: %w", err)
+		return "", fmt.Errorf("stuff write: %w", err)
 	}
 	if _, err := os.Stat(stuffFile); !errors.Is(err, os.ErrNotExist) {
-		fmt.Printf("Stuff file already exists: %s\n", stuffFile)
-		return nil
+		return fmt.Sprintf(
+				"Stuff file already exists: %s\n",
+				stuffFile,
+			), &StuffAlreadyExistsError{
+				"Stuff file already exists",
+				stuffFile,
+			}
+		// fmt.Printf("Stuff file already exists: %s\n", stuffFile)
+		// return nil
 	}
 
 	err = os.MkdirAll(filepath.Dir(stuffFile), os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("stuff write: mkdir: %w", err)
+		return "", fmt.Errorf("stuff write: mkdir: %w", err)
 	}
 
 	f, err := os.Create(stuffFile)
 	if err != nil {
-		return fmt.Errorf("stuff write: create file: %w", err)
+		return "", fmt.Errorf("stuff write: create file: %w", err)
 	}
 	defer f.Close()
 
 	w := zlib.NewWriter(f)
 	_, err = w.Write(s.Resource)
 	if err != nil {
-		return fmt.Errorf("stuff write: write file: %w", err)
+		return "", fmt.Errorf("stuff write: write file: %w", err)
 	}
 	defer w.Close()
 
-	fmt.Printf("Stuff file written: %s\n", stuffFile)
-	return nil
+	return fmt.Sprintf("Stuff file written: %s\n", stuffFile), nil
+	// fmt.Printf("Stuff file written: %s\n", stuffFile)
+	// return nil
+}
+
+type StuffAlreadyExistsError struct {
+	message string
+	path    string
+}
+
+func (e *StuffAlreadyExistsError) Error() string {
+	return fmt.Sprintf("%s: %s", e.message, e.path)
 }

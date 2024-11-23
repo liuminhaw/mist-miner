@@ -194,8 +194,14 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 		if err != nil {
 			return err
 		}
-		if err := stuffResource.Write(); err != nil {
+
+		var se *shelf.StuffAlreadyExistsError
+		if msg, err := stuffResource.Write(); errors.As(err, &se) {
+			fmt.Print(err.Error())
+		} else if err != nil {
 			return err
+		} else {
+			fmt.Print(msg)
 		}
 
 		// TODO: diary resource fetch implementation
@@ -204,8 +210,12 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 		if err != nil {
 			return err
 		}
-		if err := diaryResource.Write(); err != nil {
+		if msg, err := diaryResource.Write(); errors.As(err, &se) {
+			fmt.Print(err.Error())
+		} else if err != nil {
 			return err
+		} else {
+			fmt.Print(msg)
 		}
 
 		outline := shelf.NewStuffOutline(pMod.group, stuffResource.Hash, diaryResource.Hash)

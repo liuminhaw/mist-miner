@@ -241,14 +241,14 @@ mappingsLoop:
 			if err != nil {
 				return func() tea.Msg {
 					return updateDiaryLogMsg{
-						err: fmt.Errorf("Update diary: failed to create diary resource"),
+						err: fmt.Errorf("Update diary: failed to create diary resource: %w", err),
 					}
 				}
 			}
-			if err := diaryResource.Write(); err != nil {
+			if _, err := diaryResource.Write(); err != nil {
 				return func() tea.Msg {
 					return updateDiaryLogMsg{
-						err: fmt.Errorf("Update diary: failed to write diary resource"),
+						err: fmt.Errorf("Update diary: failed to write diary resource: %w", err),
 					}
 				}
 			}
