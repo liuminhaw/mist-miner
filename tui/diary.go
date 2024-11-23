@@ -241,6 +241,7 @@ func readDiaryItems(group, plugin string) (list.Model, error) {
 	return list.New(items, list.NewDefaultDelegate(), 0, 0), nil
 }
 
+// readMinerDiary reads the miner diary record from the shelf of given group and hash
 func readMinerDiary(group, hash string) (shared.MinerDiary, error) {
 	content, err := shelf.NewObjectRecord(group, hash).RecordRead()
 	if err != nil {

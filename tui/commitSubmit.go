@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/liuminhaw/mist-miner/shared"
 	"github.com/liuminhaw/mist-miner/shelf"
 )
 
@@ -181,6 +182,7 @@ func updateDiaryLog(item commitDiaryItem, cache *commitCache) tea.Cmd {
 	cache.labelMark = *mark
 
 	var diary shelf.Diary
+	var tmpChecker string
 mappingsLoop:
 	for _, mapping := range mark.Mappings {
 		if mapping.Module != item.plugin {
@@ -199,23 +201,23 @@ mappingsLoop:
 			if idHashMap.Identifier != item.identifier {
 				continue
 			}
-			// // TODO: Update stuff diary and outline
-			// outline, err := shelf.ReadStuffOutline(item.group, idHashMap.Hash)
-			// if err != nil {
-			// 	return func() tea.Msg {
-			// 		return updateDiaryLogMsg{
-			// 			err: fmt.Errorf("Update diary: failed to read stuff outline"),
-			// 		}
-			// 	}
-			// }
-			// mDiary, err := readMinerDiary(item.group, outline.DiaryHash)
-			// if err != nil {
-			// 	return func() tea.Msg {
-			// 		return updateDiaryLogMsg{
-			// 			err: fmt.Errorf("Update diary: failed to read miner diary"),
-			// 		}
-			// 	}
-			// }
+			// TODO: Update stuff diary and outline
+			outline, err := shelf.ReadStuffOutline(item.group, idHashMap.Hash)
+			if err != nil {
+				return func() tea.Msg {
+					return updateDiaryLogMsg{
+						err: fmt.Errorf("Update diary: failed to read stuff outline"),
+					}
+				}
+			}
+			mDiary, err := readMinerDiary(item.group, outline.DiaryHash)
+			if err != nil {
+				return func() tea.Msg {
+					return updateDiaryLogMsg{
+						err: fmt.Errorf("Update diary: failed to read miner diary"),
+					}
+				}
+			}
 
 			staticTmpDiaryFile, err := shelf.NewDiaryStaticTempFile(item.filepath)
 			if err != nil {
@@ -225,36 +227,34 @@ mappingsLoop:
 					}
 				}
 			}
-            diary, err = staticTmpDiaryFile.WriteDiary()
-            if err != nil {
-                return func() tea.Msg {
-                    return updateDiaryLogMsg{
-                        err: fmt.Errorf("Update diary: failed to write static temp diary: %w", err),
-                    }
-                }
-            }
-			// staticTmpDiaryHash, err := staticTmpDiaryFile.CalcHash()
-			// if err != nil {
-			// 	return func() tea.Msg {
-			// 		return updateDiaryLogMsg{
-			// 			err: fmt.Errorf("Update diary: failed to get static temp diary hash"),
-			// 		}
-			// 	}
-			// }
-			// diary = shelf.NewDiary(
-			// 	item.group,
-			// 	item.plugin,
-			// 	item.identifier,
-			// 	idHashMap.Alias,
-			// 	staticTmpDiaryHash,
-			// )
-			// if err := diary.Write(); err != nil {
-			// 	return func() tea.Msg {
-			// 		return updateDiaryLogMsg{
-			// 			err: fmt.Errorf("Update diary: failed to write diary"),
-			// 		}
-			// 	}
-			// }
+			diary, err = staticTmpDiaryFile.WriteDiary()
+			if err != nil {
+				return func() tea.Msg {
+					return updateDiaryLogMsg{
+						err: fmt.Errorf("Update diary: failed to write static temp diary: %w", err),
+					}
+				}
+			}
+
+			mDiaryNew := shared.NewMinerDiary(diary.Hash, string(head.Reference), mDiary.Logs.Curr)
+			diaryResource, err := shelf.NewStuff(item.group, &mDiaryNew)
+			if err != nil {
+				return func() tea.Msg {
+					return updateDiaryLogMsg{
+						err: fmt.Errorf("Update diary: failed to create diary resource"),
+					}
+				}
+			}
+			if err := diaryResource.Write(); err != nil {
+				return func() tea.Msg {
+					return updateDiaryLogMsg{
+						err: fmt.Errorf("Update diary: failed to write diary resource"),
+					}
+				}
+			}
+
+			tmpChecker = diaryResource.Hash
+
 			break mappingsLoop
 		}
 	}
@@ -263,10 +263,11 @@ mappingsLoop:
 	return tea.Tick(d, func(time.Time) tea.Msg {
 		return updateDiaryLogMsg{
 			msg: fmt.Sprintf(
-				"%s Diary %s committed, hash: %s",
+				"%s Diary %s committed, hash: %s\n  Diary stuff hash: %s",
 				checkMark,
 				item.Title(),
 				diary.Hash,
+				tmpChecker,
 			),
 		}
 	})

@@ -74,6 +74,19 @@ type MinerDiary struct {
 	} `json:"logs"`
 }
 
+func NewMinerDiary(hash, currLog, prevLog string) MinerDiary {
+	return MinerDiary{
+		Hash: hash,
+		Logs: struct {
+			Prev string `json:"prev"`
+			Curr string `json:"curr"`
+		}{
+			Prev: prevLog,
+			Curr: currLog,
+		},
+	}
+}
+
 type MinerResource struct {
 	Identifier string          `json:"identifier"`
 	Alias      string          `json:"alias"`

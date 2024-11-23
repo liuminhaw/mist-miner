@@ -99,36 +99,36 @@ func (d *Diary) Exist() bool {
 }
 
 // Write writes the diary record to file using hash value as directory and filename
-func (d *Diary) Write() error {
-	diaryFile, err := NewObjectRecord(d.Meta.Group, d.Hash).RecordFile()
-	if err != nil {
-		return fmt.Errorf("diary write: %w", err)
-	}
-	if _, err := os.Stat(diaryFile); !errors.Is(err, os.ErrNotExist) {
-		fmt.Printf("diary file already exists: %s\n", diaryFile)
-		return nil
-	}
-
-	err = os.MkdirAll(filepath.Dir(diaryFile), os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("diary write: mkdir: %w", err)
-	}
-
-	f, err := os.Create(diaryFile)
-	if err != nil {
-		return fmt.Errorf("diary write: create file: %w", err)
-	}
-	defer f.Close()
-
-	w := zlib.NewWriter(f)
-	_, err = w.Write([]byte(d.Content))
-	if err != nil {
-		return fmt.Errorf("diary write: write file: %w", err)
-	}
-	defer w.Close()
-
-	return nil
-}
+// func (d *Diary) Write() error {
+// 	diaryFile, err := NewObjectRecord(d.Meta.Group, d.Hash).RecordFile()
+// 	if err != nil {
+// 		return fmt.Errorf("diary write: %w", err)
+// 	}
+// 	if _, err := os.Stat(diaryFile); !errors.Is(err, os.ErrNotExist) {
+// 		fmt.Printf("diary file already exists: %s\n", diaryFile)
+// 		return nil
+// 	}
+//
+// 	err = os.MkdirAll(filepath.Dir(diaryFile), os.ModePerm)
+// 	if err != nil {
+// 		return fmt.Errorf("diary write: mkdir: %w", err)
+// 	}
+//
+// 	f, err := os.Create(diaryFile)
+// 	if err != nil {
+// 		return fmt.Errorf("diary write: create file: %w", err)
+// 	}
+// 	defer f.Close()
+//
+// 	w := zlib.NewWriter(f)
+// 	_, err = w.Write([]byte(d.Content))
+// 	if err != nil {
+// 		return fmt.Errorf("diary write: write file: %w", err)
+// 	}
+// 	defer w.Close()
+//
+// 	return nil
+// }
 
 // NewTempFile creates a temporary file for the diary record if it does not exist
 // and returns the file path with error if any
