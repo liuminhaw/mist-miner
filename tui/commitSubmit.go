@@ -160,6 +160,7 @@ type updateDiaryLogMsg struct {
 	err error
 }
 
+// updateDiaryLog updates the diary log record of stuff diary and stuff outline
 func updateDiaryLog(item commitDiaryItem, cache *commitCache) tea.Cmd {
 	// Read and fill cache from log record
 	head, err := shelf.NewRefMark(shelf.SHELF_MARK_FILE, item.group)
@@ -182,7 +183,10 @@ func updateDiaryLog(item commitDiaryItem, cache *commitCache) tea.Cmd {
 	cache.labelMark = *mark
 
 	var diary shelf.Diary
-	var tmpChecker string
+	var diaryLogger struct {
+		stuffHash   string
+		outlineHash string
+	}
 mappingsLoop:
 	for _, mapping := range mark.Mappings {
 		if mapping.Module != item.plugin {
@@ -236,6 +240,7 @@ mappingsLoop:
 				}
 			}
 
+			// Update stuff diary record
 			mDiaryNew := shared.NewMinerDiary(diary.Hash, string(head.Reference), mDiary.Logs.Curr)
 			diaryResource, err := shelf.NewStuff(item.group, &mDiaryNew)
 			if err != nil {
@@ -253,7 +258,18 @@ mappingsLoop:
 				}
 			}
 
-			tmpChecker = diaryResource.Hash
+			// Update stuff outline record
+			newOutline := shelf.NewStuffOutline(item.group, outline.ResourceHash, diaryResource.Hash)
+			if err := newOutline.Write(); err != nil {
+				return func() tea.Msg {
+					return updateDiaryLogMsg{
+						err: fmt.Errorf("Update diary: failed to write stuff outline: %w", err),
+					}
+				}
+			}
+
+			diaryLogger.stuffHash = diaryResource.Hash
+			diaryLogger.outlineHash = newOutline.Hash
 
 			break mappingsLoop
 		}
@@ -263,11 +279,12 @@ mappingsLoop:
 	return tea.Tick(d, func(time.Time) tea.Msg {
 		return updateDiaryLogMsg{
 			msg: fmt.Sprintf(
-				"%s Diary %s committed, hash: %s\n  Diary stuff hash: %s",
+				"%s Diary %s committed, hash: %s\n  Diary stuff hash: %s\n  Stuff outline hash: %s\n",
 				checkMark,
 				item.Title(),
 				diary.Hash,
-				tmpChecker,
+				diaryLogger.stuffHash,
+				diaryLogger.outlineHash,
 			),
 		}
 	})
