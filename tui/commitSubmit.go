@@ -17,10 +17,11 @@ import (
 )
 
 type commitCache struct {
-	labelMark    shelf.LabelMark
-	idHashMaps   shelf.IdentifierHashMaps
-	stuffOutline shelf.StuffOutline
-	isCached     bool
+	head            shelf.RefMark
+	labelMark       shelf.LabelMark
+	groupIdHashMaps map[string]shelf.IdentifierHashMaps
+	stuffOutline    shelf.StuffOutline
+	isCached        bool
 }
 
 type commitSubmitModel struct {
@@ -69,8 +70,10 @@ func InitCommitSubmitModel(items []list.Item) (tea.Model, error) {
 	s := spinner.New()
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
 	return commitSubmitModel{
-		diaries:  diaryItems,
-		cache:    commitCache{},
+		diaries: diaryItems,
+		cache: commitCache{
+			groupIdHashMaps: make(map[string]shelf.IdentifierHashMaps),
+		},
 		spinner:  s,
 		progress: p,
 	}, nil
@@ -162,49 +165,76 @@ type updateDiaryLogMsg struct {
 
 // updateDiaryLog updates the diary log record of stuff diary and stuff outline
 func updateDiaryLog(item commitDiaryItem, cache *commitCache) tea.Cmd {
-	// Read and fill cache from log record
-	head, err := shelf.NewRefMark(shelf.SHELF_MARK_FILE, item.group)
-	if err != nil {
-		return func() tea.Msg {
-			return updateDiaryLogMsg{
-				err: fmt.Errorf("Update diary: failed to get ref head"),
-			}
-		}
-	}
-
-	mark, err := shelf.ReadMark(item.group, string(head.Reference))
-	if err != nil {
-		return func() tea.Msg {
-			return updateDiaryLogMsg{
-				err: fmt.Errorf("Update diary: failed to read mark cache"),
-			}
-		}
-	}
-	cache.labelMark = *mark
-
-	var diary shelf.Diary
-	var diaryLogger struct {
-		stuffHash   string
-		outlineHash string
-	}
-mappingsLoop:
-	for _, mapping := range mark.Mappings {
-		if mapping.Module != item.plugin {
-			continue
-		}
-		idHashMaps, err := shelf.ReadIdentifierHashMaps(item.group, mapping.Hash)
+	// Read and fill cache from log record if cache does not exist
+	if !cache.isCached {
+		head, err := shelf.NewRefMark(shelf.SHELF_MARK_FILE, item.group)
 		if err != nil {
 			return func() tea.Msg {
 				return updateDiaryLogMsg{
-					err: fmt.Errorf("Update diary: failed to read identifier hash maps"),
+					err: fmt.Errorf("Update diary: failed to get ref head"),
 				}
 			}
 		}
+		cache.head = head
 
-		for _, idHashMap := range idHashMaps.Maps {
+		mark, err := shelf.ReadMark(item.group, string(head.Reference))
+		if err != nil {
+			return func() tea.Msg {
+				return updateDiaryLogMsg{
+					err: fmt.Errorf("Update diary: failed to read mark cache"),
+				}
+			}
+		}
+		cache.labelMark = *mark
+
+		cache.isCached = true
+	}
+
+	var diary shelf.Diary
+	var diaryLogger struct {
+		stuffHash      string
+		outlineHash    string
+		mappingMatched bool
+		idMatched      bool
+		hashMap        struct {
+			mapId  []string
+			itemId []string
+		}
+	}
+mappingsLoop:
+	// for _, mapping := range mark.Mappings {
+	for _, mapping := range cache.labelMark.Mappings {
+		if mapping.Module != item.plugin {
+			continue
+		}
+
+		diaryLogger.mappingMatched = true
+
+		// var idHashMaps *shelf.IdentifierHashMaps
+		key := fmt.Sprintf("%s_%s", item.group, mapping.Hash)
+		if _, ok := cache.groupIdHashMaps[key]; !ok {
+			// var err error
+			idHashMaps, err := shelf.ReadIdentifierHashMaps(item.group, mapping.Hash)
+			if err != nil {
+				return func() tea.Msg {
+					return updateDiaryLogMsg{
+						err: fmt.Errorf("Update diary: failed to read identifier hash maps"),
+					}
+				}
+			}
+			cache.groupIdHashMaps[item.group] = *idHashMaps
+		}
+
+		for _, idHashMap := range cache.groupIdHashMaps[item.group].Maps {
+			diaryLogger.hashMap.mapId = append(diaryLogger.hashMap.mapId, idHashMap.Identifier)
+			diaryLogger.hashMap.itemId = append(diaryLogger.hashMap.itemId, item.identifier)
+
 			if idHashMap.Identifier != item.identifier {
 				continue
 			}
+
+			diaryLogger.idMatched = true
+
 			// TODO: Update stuff diary and outline
 			outline, err := shelf.ReadStuffOutline(item.group, idHashMap.Hash)
 			if err != nil {
@@ -241,7 +271,7 @@ mappingsLoop:
 			}
 
 			// Update stuff diary record
-			mDiaryNew := shared.NewMinerDiary(diary.Hash, string(head.Reference), mDiary.Logs.Curr)
+			mDiaryNew := shared.NewMinerDiary(diary.Hash, string(cache.head.Reference), mDiary.Logs.Curr)
 			diaryResource, err := shelf.NewStuff(item.group, &mDiaryNew)
 			if err != nil {
 				return func() tea.Msg {
@@ -279,12 +309,16 @@ mappingsLoop:
 	return tea.Tick(d, func(time.Time) tea.Msg {
 		return updateDiaryLogMsg{
 			msg: fmt.Sprintf(
-				"%s Diary %s committed, hash: %s\n  Diary stuff hash: %s\n  Stuff outline hash: %s\n",
+				"%s Diary %s committed, hash: %s\n  Diary stuff hash: %s\n  Stuff outline hash: %s,\n Mapping matched: %v,\n Id matched: %v,\n Map id: %+v,\n Item id: %+v\n",
 				checkMark,
 				item.Title(),
 				diary.Hash,
 				diaryLogger.stuffHash,
 				diaryLogger.outlineHash,
+				diaryLogger.mappingMatched,
+				diaryLogger.idMatched,
+				diaryLogger.hashMap.mapId,
+				diaryLogger.hashMap.itemId,
 			),
 		}
 	})
