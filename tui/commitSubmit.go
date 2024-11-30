@@ -102,6 +102,24 @@ func (m commitSubmitModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// diary := m.diaries[m.index]
 		if m.index >= len(m.diaries)-1 {
+			// Write identifier hash maps from cache to file
+			for _, idHashMaps := range m.cache.groupIdHashMaps {
+				idHashMaps.Sort()
+				if err := idHashMaps.Write(); err != nil {
+					return m, tea.Sequence(
+						tea.Printf("Failed to write identifier hash maps: %s", err),
+						tea.Quit,
+					)
+				}
+				msg.msg += fmt.Sprintf("  Identifier hash map written, group: %s, hash: %s\n",
+					idHashMaps.Group,
+					idHashMaps.Hash,
+				)
+			}
+
+			// Update label mark content
+			// Update HEAD reference log
+
 			// Everything's been processed
 			m.done = true
 			return m, tea.Sequence(
@@ -200,6 +218,7 @@ func updateDiaryLog(item commitDiaryItem, cache *commitCache) tea.Cmd {
 			mapId  []string
 			itemId []string
 		}
+		idHashMap shelf.IdentifierHashMap
 	}
 mappingsLoop:
 	// for _, mapping := range mark.Mappings {
@@ -222,10 +241,10 @@ mappingsLoop:
 					}
 				}
 			}
-			cache.groupIdHashMaps[item.group] = *idHashMaps
+			cache.groupIdHashMaps[key] = *idHashMaps
 		}
 
-		for _, idHashMap := range cache.groupIdHashMaps[item.group].Maps {
+		for i, idHashMap := range cache.groupIdHashMaps[key].Maps {
 			diaryLogger.hashMap.mapId = append(diaryLogger.hashMap.mapId, idHashMap.Identifier)
 			diaryLogger.hashMap.itemId = append(diaryLogger.hashMap.itemId, item.identifier)
 
@@ -301,6 +320,10 @@ mappingsLoop:
 			diaryLogger.stuffHash = diaryResource.Hash
 			diaryLogger.outlineHash = newOutline.Hash
 
+			// Update identifier hash map content
+			cache.groupIdHashMaps[key].Maps[i].Hash = newOutline.Hash
+			diaryLogger.idHashMap = cache.groupIdHashMaps[key].Maps[i]
+
 			break mappingsLoop
 		}
 	}
@@ -309,7 +332,7 @@ mappingsLoop:
 	return tea.Tick(d, func(time.Time) tea.Msg {
 		return updateDiaryLogMsg{
 			msg: fmt.Sprintf(
-				"%s Diary %s committed, hash: %s\n  Diary stuff hash: %s\n  Stuff outline hash: %s,\n Mapping matched: %v,\n Id matched: %v,\n Map id: %+v,\n Item id: %+v\n",
+				"%s Diary %s committed, hash: %s\n  Diary stuff hash: %s\n  Stuff outline hash: %s,\n  Mapping matched: %v,\n  Id matched: %v,\n  Map id: %+v,\n  Item id: %+v\n  Updated id hash map: %+v\n",
 				checkMark,
 				item.Title(),
 				diary.Hash,
@@ -319,6 +342,7 @@ mappingsLoop:
 				diaryLogger.idMatched,
 				diaryLogger.hashMap.mapId,
 				diaryLogger.hashMap.itemId,
+				diaryLogger.idHashMap,
 			),
 		}
 	})
