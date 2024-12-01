@@ -25,7 +25,10 @@ const (
 	// SHELF_HISTORY_LOGS_PER_PAGE = 10
 	SHELF_HISTORY_LOGS_PER_PAGE = 1000
 
-    shelf_temp_base_dir = "mist-miner"
+	shelf_temp_base_dir = "mist-miner"
+
+	LOG_TYPE_MINE  = "mine"
+	LOG_TYPE_DIARY = "diary"
 )
 
 // RefFile returns the file path to store the reference to the latest record mark
@@ -40,5 +43,5 @@ func RefFile(group, name string) (string, error) {
 }
 
 func ShelfTempDiary() string {
-    return filepath.Join(os.TempDir(), shelf_temp_base_dir, shelf_diary_dir)
+	return filepath.Join(os.TempDir(), shelf_temp_base_dir, shelf_diary_dir)
 }

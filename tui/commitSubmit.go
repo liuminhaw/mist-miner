@@ -104,6 +104,7 @@ func (m commitSubmitModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.index >= len(m.diaries)-1 {
 			// Write identifier hash maps from cache to file
 			for _, idHashMaps := range m.cache.groupIdHashMaps {
+				originIdMapsHash := idHashMaps.Hash
 				idHashMaps.Sort()
 				if err := idHashMaps.Write(); err != nil {
 					return m, tea.Sequence(
@@ -111,14 +112,46 @@ func (m commitSubmitModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						tea.Quit,
 					)
 				}
+				// msg.msg += fmt.Sprintf("  Identifier origin hash: %s\n", originHash)
 				msg.msg += fmt.Sprintf("  Identifier hash map written, group: %s, hash: %s\n",
 					idHashMaps.Group,
 					idHashMaps.Hash,
 				)
+
+				for i, mapping := range m.cache.labelMark.Mappings {
+					if mapping.Hash == originIdMapsHash {
+						m.cache.labelMark.Mappings[i].Hash = idHashMaps.Hash
+						break
+					}
+				}
 			}
 
-			// Update label mark content
-			// Update HEAD reference log
+			// Update label mark content and HEAD reference
+			m.cache.labelMark.TimeStamp = time.Now()
+			m.cache.labelMark.LogType = shelf.LOG_TYPE_DIARY
+			m.cache.labelMark.Parent = string(m.cache.head.Reference)
+			if err := m.cache.labelMark.Update(); err != nil {
+				return m, tea.Sequence(
+					tea.Printf("Failed to update label mark: %s", err),
+					tea.Quit,
+				)
+			}
+			msg.msg += fmt.Sprintf("  Label mark updated, group: %s, hash: %s\n", m.cache.labelMark.Group, m.cache.labelMark.Hash)
+
+			// Update history loger and pointer next map
+			if err := shelf.GenerateHistoryRecords(m.cache.labelMark.Group, shelf.SHELF_HISTORY_LOGS_PER_PAGE); err != nil {
+				return m, tea.Sequence(
+					tea.Printf("Failed to update history logger: %s", err),
+					tea.Quit,
+				)
+			}
+			pointer := shelf.NewHistoryPointer(m.cache.labelMark.Group, m.cache.labelMark.Parent, m.cache.labelMark.Hash)
+			if err := pointer.WriteNextMap(); err != nil {
+				return m, tea.Sequence(
+					tea.Printf("Failed to write new pointer map: %s", err),
+					tea.Quit,
+				)
+			}
 
 			// Everything's been processed
 			m.done = true
