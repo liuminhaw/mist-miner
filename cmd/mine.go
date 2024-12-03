@@ -204,21 +204,28 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 			fmt.Print(msg)
 		}
 
-		// TODO: diary resource fetch implementation
-		tempDiary := shared.MinerDiary{}
-		diaryResource, err := shelf.NewStuff(pMod.group, &tempDiary)
+		diaryHash, err := shelf.HasDiary(pMod.group, pMod.name, resource.Identifier)
 		if err != nil {
-			return err
-		}
-		if msg, err := diaryResource.Write(); errors.As(err, &se) {
-			fmt.Print(err.Error())
-		} else if err != nil {
-			return err
-		} else {
-			fmt.Print(msg)
+			if errors.Is(err, shelf.ErrDiaryNotFound) {
+				tempDiary := shared.MinerDiary{}
+				diaryResource, err := shelf.NewStuff(pMod.group, &tempDiary)
+				if err != nil {
+					return err
+				}
+				if msg, err := diaryResource.Write(); errors.As(err, &se) {
+					fmt.Print(err.Error())
+				} else if err != nil {
+					return err
+				} else {
+					fmt.Print(msg)
+				}
+				diaryHash = diaryResource.Hash
+			} else {
+				return err
+			}
 		}
 
-		outline := shelf.NewStuffOutline(pMod.group, stuffResource.Hash, diaryResource.Hash)
+		outline := shelf.NewStuffOutline(pMod.group, stuffResource.Hash, diaryHash)
 		if err := outline.Write(); err != nil {
 			return err
 		}
@@ -228,7 +235,6 @@ func run(pMod pluginModule, gLabel *groupLabels, logger hclog.Logger) error {
 			Alias:      resource.Alias,
 			Hash:       outline.Hash,
 		})
-
 	}
 
 	// Prevent from writing empty label map

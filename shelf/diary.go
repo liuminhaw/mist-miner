@@ -98,38 +98,6 @@ func (d *Diary) Exist() bool {
 	return record.Exist()
 }
 
-// Write writes the diary record to file using hash value as directory and filename
-// func (d *Diary) Write() error {
-// 	diaryFile, err := NewObjectRecord(d.Meta.Group, d.Hash).RecordFile()
-// 	if err != nil {
-// 		return fmt.Errorf("diary write: %w", err)
-// 	}
-// 	if _, err := os.Stat(diaryFile); !errors.Is(err, os.ErrNotExist) {
-// 		fmt.Printf("diary file already exists: %s\n", diaryFile)
-// 		return nil
-// 	}
-//
-// 	err = os.MkdirAll(filepath.Dir(diaryFile), os.ModePerm)
-// 	if err != nil {
-// 		return fmt.Errorf("diary write: mkdir: %w", err)
-// 	}
-//
-// 	f, err := os.Create(diaryFile)
-// 	if err != nil {
-// 		return fmt.Errorf("diary write: create file: %w", err)
-// 	}
-// 	defer f.Close()
-//
-// 	w := zlib.NewWriter(f)
-// 	_, err = w.Write([]byte(d.Content))
-// 	if err != nil {
-// 		return fmt.Errorf("diary write: write file: %w", err)
-// 	}
-// 	defer w.Close()
-//
-// 	return nil
-// }
-
 // NewTempFile creates a temporary file for the diary record if it does not exist
 // and returns the file path with error if any
 func (d *Diary) NewTempFile() (DiaryTempFile, error) {
@@ -362,4 +330,45 @@ func (d *DiaryStaticTempFile) WriteDiary() (Diary, error) {
 	defer w.Close()
 
 	return NewDiary(d.Meta.Group, d.Meta.Plugin, d.Meta.Identifier, d.Meta.Alias, hash), nil
+}
+
+// HasDiary checks if the diary record exists for the given group and identifier
+// and returns the hash value of the diary record if exists,
+// and returns ErrDiaryNotFound if the diary record does not exist
+func HasDiary(group, plugin, identifier string) (string, error) {
+	head, err := NewRefMark(SHELF_MARK_FILE, group)
+	if err != nil {
+		if errors.Is(err, ErrRefHeadNotFound) {
+			return "", ErrDiaryNotFound
+		}
+		return "", fmt.Errorf("HasDiary check error: %w", err)
+	}
+
+	mark, err := ReadMark(group, string(head.Reference))
+	if err != nil {
+		return "", fmt.Errorf("HasDiary check error: %w", err)
+	}
+
+	for _, mapping := range mark.Mappings {
+		if mapping.Module != plugin {
+			continue
+		}
+
+		idHashMaps, err := ReadIdentifierHashMaps(group, mapping.Hash)
+		if err != nil {
+			return "", fmt.Errorf("HasDiary check error: %w", err)
+		}
+
+		for _, idHashMap := range idHashMaps.Maps {
+			if idHashMap.Identifier == identifier {
+				outline, err := ReadStuffOutline(group, idHashMap.Hash)
+				if err != nil {
+					return "", fmt.Errorf("HasDiary check error: %w", err)
+				}
+				return outline.DiaryHash, nil
+			}
+		}
+	}
+
+	return "", ErrDiaryNotFound
 }

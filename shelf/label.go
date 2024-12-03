@@ -148,6 +148,9 @@ type RefMark struct {
 func NewRefMark(name, group string) (RefMark, error) {
 	mark := RefMark{Name: name, Group: group}
 	if err := mark.getReference(); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return RefMark{}, ErrRefHeadNotFound
+		}
 		return RefMark{}, fmt.Errorf("NewRefMark(%s, %s): %w", name, group, err)
 	}
 
@@ -249,7 +252,7 @@ func NewMark(group, logType string) (*LabelMark, error) {
 	}
 
 	head, err := NewRefMark(SHELF_MARK_FILE, group)
-	if errors.Is(err, os.ErrNotExist) {
+	if errors.Is(err, ErrRefHeadNotFound) {
 		mark.Parent = "nil"
 	} else if err != nil {
 		return nil, fmt.Errorf("new label mark: %w", err)
