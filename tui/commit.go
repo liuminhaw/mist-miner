@@ -30,6 +30,14 @@ func (i commitDiaryItem) FilterValue() string {
 	return fmt.Sprintf("%s %s %s", i.group, i.plugin, i.identifier)
 }
 
+// remove removes the commit diary item from the disk
+func (i commitDiaryItem) remove() error {
+	if err := os.Remove(i.filepath); err != nil {
+		return fmt.Errorf("failed to remove commit diary item: %w", err)
+	}
+	return nil
+}
+
 type commitDiaryModel struct {
 	list   list.Model
 	width  int

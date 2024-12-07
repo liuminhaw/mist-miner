@@ -100,7 +100,6 @@ func (m commitSubmitModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 		}
 
-		// diary := m.diaries[m.index]
 		if m.index >= len(m.diaries)-1 {
 			// Write identifier hash maps from cache to file
 			for _, idHashMaps := range m.cache.groupIdHashMaps {
@@ -151,6 +150,16 @@ func (m commitSubmitModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					tea.Printf("Failed to write new pointer map: %s", err),
 					tea.Quit,
 				)
+			}
+
+			// Remove temp files after submit success
+			for _, diary := range m.diaries {
+				if err := diary.remove(); err != nil {
+					return m, tea.Sequence(
+						tea.Printf("Failed to remove temp file: %s", err),
+						tea.Quit,
+					)
+				}
 			}
 
 			// Everything's been processed
